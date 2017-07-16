@@ -1,0 +1,26 @@
+{
+  "name": "codespell",
+  "version": "0.0.0",
+  "description": "Record time spent programming epiphanies",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/abhisheksoni27/codespell.git"
+  },
+  "keywords": [
+    "programming",
+    "time",
+    "code",
+    "coding",
+    "record"
+  ],
+  "author": "Abhishek Soni",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/abhisheksoni27/codespell/issues"
+  },
+  "homepage": "https://github.com/abhisheksoni27/codespell#readme"
+}
