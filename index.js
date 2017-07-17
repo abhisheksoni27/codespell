@@ -66,7 +66,7 @@ function addEditor(data, codeEditor) {
 };
 
 function display() {
-    console.log('\033c');
+    term('\033c');
 
     // Metadata gone. Print again.
 
@@ -74,32 +74,32 @@ function display() {
         const name = editor.name;
         const fullName = chalk.blue(editors[name]) + chalk.white('💻');
         if (!editor.time) {
-            console.log('Loading..')
+            term('Loading..')
             return;
         } else {
             displayMetadata();
             const time = chalk.green(editor.time);
             hideCursor();
             const escapeString = "\033[" + (2 + index + 5) + ";0f";
-            console.log(index);
-            console.log(`${escapeString} ${fullName}: ${time}`);
+            term(index);
+            term(`${escapeString} ${fullName}: ${time}`);
         }
     })
 }
 
 function displayMetadata() {
-    console.log('\033c');
+    term('\033c');
 
-    getTermSize((cols, lines) => {
+    getConsoleSize((cols, lines) => {
         const title = chalk.bgBlue.white('CodeSpell');
-        console.log("\033[1;" + (Math.floor(cols / 2) - 2) + "f" + title);
+        term("\033[1;" + (Math.floor(cols / 2) - 2) + "f" + title);
     });
 
 };
 
 function save(codeEditor) {}
 
-function getTermSize(cb) {
+function getConsoleSize(cb) {
     spawn('resize').stdout.on('data', function (data) {
         data = String(data)
         var lines = data.split('\n'),
@@ -111,5 +111,9 @@ function getTermSize(cb) {
 }
 
 function hideCursor() {
-    console.log("\033[?025l");
+    term("\033[?025l");
+}
+
+function term() {
+    console.log([...arguments].join(""));
 }
