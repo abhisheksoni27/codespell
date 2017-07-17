@@ -22,5 +22,8 @@
   "bugs": {
     "url": "https://github.com/abhisheksoni27/codespell/issues"
   },
-  "homepage": "https://github.com/abhisheksoni27/codespell#readme"
+  "homepage": "https://github.com/abhisheksoni27/codespell#readme",
+  "dependencies": {
+    "chalk": "^2.0.1"
+  }
 }
