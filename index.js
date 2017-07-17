@@ -6,7 +6,8 @@ const codeEditors = ['code', 'atom', 'subl', 'webstorm', 'nano', 'studio', 'idea
 const runningEditors = new Set();
 let runningEditorNames = [];
 const refreshTime = 1000;
-let count 
+let count = 0;
+
 setInterval(spawnProcess, refreshTime);
 
 function spawnProcess() {
@@ -19,8 +20,10 @@ function spawnProcess() {
             }
         });
     });
+    
     display();
-    if(!(count%10000)){
+
+    if (!(count % 10000)) {
         save(runningEditors);
     }
 }
@@ -38,7 +41,7 @@ function addEditor(data, codeEditor) {
         } else {
             runningEditors.forEach(function (codeEditor) {
                 let time;
-                exec(`ps -eo comm, etime | grep ${codeEditor.name} | head -1`, (error, stdout, stderr) => {
+                exec(`ps -eo comm,etime | grep ${codeEditor.name} | head -1`, (error, stdout, stderr) => {
                     let timeString = stdout.toString().trim().match(/\d{1,3}/g);
 
                     // Editor has been closed
@@ -76,5 +79,4 @@ function displayPast() {
 
 };
 
-function save(codeEditor){
-}
+function save(codeEditor) {}
