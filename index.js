@@ -16,20 +16,22 @@ setInterval(spawnProcess, refreshTime);
 
 function spawnProcess() {
     count++;
-    codeEditors.forEach((codeEditor) => {
-        const top = exec(`ps ax | grep ${codeEditor} -c`, (error, stdout, stderr) => {
-            if (!error) {
-                let data = stdout.toString().trim();
-                addEditor(data, codeEditor);
-            }
-        });
-    });
+    codeEditors.forEach(spawnAndAdd);
 
     display();
 
     if (!(count % 10000)) {
         save(runningEditors);
     }
+}
+
+function spawnAndAdd(codeEditor) {
+    const top = exec(`ps ax | grep ${codeEditor} -c`, (error, stdout, stderr) => {
+        if (!error) {
+            let data = stdout.toString().trim();
+            addEditor(data, codeEditor);
+        }
+    });
 }
 
 function addEditor(data, codeEditor) {
@@ -43,26 +45,28 @@ function addEditor(data, codeEditor) {
 
             runningEditorNames.push(codeEditor);
         } else {
-            runningEditors.forEach((codeEditor, index) => {
-                let time;
-                exec(`ps -eo comm,etime | grep ${codeEditor.name} | head -1`, (error, stdout, stderr) => {
-                    let timeString = stdout.toString().trim().match(/\d{1,3}/g);
-
-                    // Editor has been closed
-                    if (!timeString) {
-                        runningEditorNames = deleteItem(runningEditorNames, index);
-                        runningEditors = deleteItem(runningEditors, index)
-                        save(codeEditor);
-                        return;
-                    };
-
-                    time = timeString.join(':');
-                    codeEditor['time'] = time;
-                });
-            });
+            runningEditors.forEach(editorClosed);
         }
     }
 };
+
+function editorClosed(codeEditor, index) {
+    let time;
+    exec(`ps -eo comm,etime | grep ${codeEditor.name} | head -1`, (error, stdout, stderr) => {
+        let timeString = stdout.toString().trim().match(/\d{1,3}/g);
+
+        // Editor has been closed
+        if (!timeString) {
+            runningEditorNames = deleteItem(runningEditorNames, index);
+            runningEditors = deleteItem(runningEditors, index)
+            save(codeEditor);
+            return;
+        };
+
+        time = timeString.join(':');
+        codeEditor['time'] = time;
+    });
+}
 
 function display() {
     term('\033c');
@@ -137,7 +141,7 @@ if (process.platform === "win32") {
 }
 
 process.on("SIGINT", function () {
-    
+
     // Clear console
     console.log("\033c");
     process.exit();
