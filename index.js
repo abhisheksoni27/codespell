@@ -68,6 +68,7 @@ function display(obj, past) {
     if (!past) {
         const codeEditor = chalk.blue(obj.codeEditor);
         const time = chalk.blue(obj.time);
+        console.log('\033c')
         console.log(codeEditor, time);
     } else {
         //
