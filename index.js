@@ -1,6 +1,6 @@
 const exec = require('child_process').exec;
 const chalk = require('chalk');
-const codeEditors = ['code', 'atom', 'subl', 'webstorm', 'studio', 'nano'];
+const codeEditors = ['code', 'atom', 'subl', 'webstorm', 'nano', 'studio', 'idea'];
 const runningEditors = new Set();
 const runningEditorNames = [];
 const refreshTime = 1000;
@@ -44,32 +44,30 @@ function addEditor(data, codeEditor) {
             // });
 
             runningEditors.add({
-                codeEditor,
+                name: codeEditor,
                 // initTime: time
             });
             runningEditorNames.push(codeEditor);
         } else {
             runningEditors.forEach((codeEditor) => {
                 let time;
-
-                exec(`ps -eo comm,etime | grep 'code' | head -1`, (error, stdout, stderr) => {
+                exec(`ps -eo comm,etime | grep ${codeEditor.name} | head -1`, (error, stdout, stderr) => {
                     let timeString = stdout.toString().trim().match(/\d{1,3}/g);
                     time = timeString.join(':');
                     codeEditor['time'] = time;
                     display(codeEditor, false);
                 });
-
             });
         }
     }
 };
 
-function display(obj, past) {
+function display(editor, past) {
     if (!past) {
-        const codeEditor = chalk.blue(obj.codeEditor);
-        const time = chalk.blue(obj.time);
+        const name = chalk.blue(editor.name);
+        const time = chalk.blue(editor.time);
         console.log('\033c')
-        console.log(codeEditor, time);
+        console.log(name, time);
     } else {
         //
     }
