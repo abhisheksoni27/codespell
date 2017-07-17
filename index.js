@@ -1,12 +1,16 @@
 const editors = require('./editors.js');
 
 const exec = require('child_process').exec;
+const spawn = require('child_process').spawn
 const chalk = require('chalk');
 const codeEditors = ['code', 'atom', 'subl', 'webstorm', 'nano', 'studio', 'idea'];
-const runningEditors = new Set();
+const runningEditors = [];
 let runningEditorNames = [];
 const refreshTime = 1000;
 let count = 0;
+
+displayMetadata();
+hideCursor();
 
 setInterval(spawnProcess, refreshTime);
 
@@ -20,7 +24,7 @@ function spawnProcess() {
             }
         });
     });
-    
+
     display();
 
     if (!(count % 10000)) {
@@ -33,7 +37,7 @@ function addEditor(data, codeEditor) {
     if (count > 2) {
         // Process exists
         if (runningEditorNames.indexOf(codeEditor) === -1) {
-            runningEditors.add({
+            runningEditors.push({
                 name: codeEditor,
             });
 
@@ -52,6 +56,7 @@ function addEditor(data, codeEditor) {
                         save(codeEditor);
                         return;
                     };
+
                     time = timeString.join(':');
                     codeEditor['time'] = time;
                 });
@@ -61,22 +66,50 @@ function addEditor(data, codeEditor) {
 };
 
 function display() {
-    console.log("\033c");
-    runningEditors.forEach(editor => {
+    console.log('\033c');
+
+    // Metadata gone. Print again.
+
+    runningEditors.forEach((editor, index) => {
         const name = editor.name;
         const fullName = chalk.blue(editors[name]) + chalk.white('💻');
         if (!editor.time) {
-            console.log("Loading..")
+            console.log('Loading..')
             return;
         } else {
+            displayMetadata();
             const time = chalk.green(editor.time);
-            console.log(fullName, time);
+            hideCursor();
+            const escapeString = "\033[" + (2 + index + 5) + ";0f";
+            console.log(index);
+            console.log(`${escapeString} ${fullName}: ${time}`);
         }
     })
 }
 
-function displayPast() {
+function displayMetadata() {
+    console.log('\033c');
+
+    getTermSize((cols, lines) => {
+        const title = chalk.bgBlue.white('CodeSpell');
+        console.log("\033[1;" + (Math.floor(cols / 2) - 2) + "f" + title);
+    });
 
 };
 
 function save(codeEditor) {}
+
+function getTermSize(cb) {
+    spawn('resize').stdout.on('data', function (data) {
+        data = String(data)
+        var lines = data.split('\n'),
+            cols = Number(lines[0].match(/^COLUMNS=([0-9]+);$/)[1]),
+            lines = Number(lines[1].match(/^LINES=([0-9]+);$/)[1])
+        if (cb)
+            cb(cols, lines)
+    })
+}
+
+function hideCursor() {
+    console.log("\033[?025l");
+}
