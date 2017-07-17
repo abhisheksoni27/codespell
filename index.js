@@ -1,26 +1,29 @@
 const editors = require('./editors.js');
+const timeUtils = require('./timeUtil.js');
+const utils = require('./utils.js');
 
 const exec = require('child_process').exec;
 const spawn = require('child_process').spawn
+const fs = require('fs');
 const chalk = require('chalk');
 const codeEditors = ['code', 'atom', 'subl', 'webstorm', 'nano', 'studio', 'idea'];
 let runningEditors = [];
 let runningEditorNames = [];
 const refreshTime = 1000;
 let count = 0;
+const saveTime = 5;
 
 displayMetadata();
-hideCursor();
+utils.hideCursor();
 
 setInterval(spawnProcess, refreshTime);
 
 function spawnProcess() {
     count++;
     codeEditors.forEach(spawnAndAdd);
-
     display();
 
-    if (!(count % 10000)) {
+    if (!(count % saveTime)) {
         save(runningEditors);
     }
 }
@@ -41,6 +44,7 @@ function addEditor(data, codeEditor) {
         if (runningEditorNames.indexOf(codeEditor) === -1) {
             runningEditors.push({
                 name: codeEditor,
+                close: false
             });
 
             runningEditorNames.push(codeEditor);
@@ -57,9 +61,8 @@ function editorClosed(codeEditor, index) {
 
         // Editor has been closed
         if (!timeString) {
-            runningEditorNames = deleteItem(runningEditorNames, index);
-            runningEditors = deleteItem(runningEditors, index)
-            save(codeEditor);
+            codeEditor.close = !codeEditor.close;
+            save(runningEditors, index);
             return;
         };
 
@@ -69,7 +72,7 @@ function editorClosed(codeEditor, index) {
 }
 
 function display() {
-    term('\033c');
+    // utils.term('\033c');
 
     // Metadata gone. Print again.
     displayMetadata();
@@ -78,52 +81,78 @@ function display() {
         const name = editor.name;
         const fullName = chalk.blue(editors[name]) + chalk.white('💻');
         if (!editor.time) {
-            term('Loading..')
+            utils.term('Loading..')
             return;
         } else {
-            hideCursor();
+            utils.hideCursor();
 
             const time = chalk.green(editor.time);
             const escapeString = "\033[" + (2 + index) + ";0f";
 
-            term(`${escapeString} ${fullName}: ${time}`);
+            utils.term(`${escapeString} ${fullName}: ${time}`);
         }
     })
 }
 
 function displayMetadata() {
-    term('\033c');
+    utils.term('\033c');
 
-    getConsoleSize((cols, lines) => {
+    utils.getConsoleSize((cols, lines) => {
         const title = chalk.bgBlue.white('CodeSpell');
-        term("\033[1;" + (Math.floor(cols / 2) - 2) + "f" + title);
+        utils.term("\033[1;" + (Math.floor(cols / 2) - 2) + "f" + title);
     });
 
 };
 
-function save(codeEditor) {}
+function save(codeEditors, index) {
+    const initData = JSON.stringify(codeEditors);
+    const date = new Date().toDateString().split(" ").join("-");
+    let fileName = `codespell-${date}.json`;
+    const home = require('os').homedir();
+    fileName = home + "/.codespell/" + fileName;
 
-function getConsoleSize(cb) {
-    spawn('resize').stdout.on('data', function (data) {
-        data = String(data)
-        var lines = data.split('\n'),
-            cols = Number(lines[0].match(/^COLUMNS=([0-9]+);$/)[1]),
-            lines = Number(lines[1].match(/^LINES=([0-9]+);$/)[1])
-        if (cb)
-            cb(cols, lines)
-    })
-}
+    fs.stat(fileName, (err, exists) => {
+        //File Exists   
+        if (exists && !err) {
+            // Read File
+            fs.readFile(fileName, (err, data) => {
+                if (err) throw new Error(err);
 
-function hideCursor() {
-    term("\033[?025l");
-}
+                const temp = JSON.parse(data.toString());
+                const finalData = [];
+                // For each entry (code editor)
+                temp.forEach((entry) => {
+                    codeEditors.forEach((editor) => {
 
-function term() {
-    console.log([...arguments].join(""));
-}
-
-function deleteItem(array, index) {
-    return [...array.slice(0, index), ...array.slice(index + 1)];
+                        if (editor.name === temp.name) {
+                            // Add
+                            const savedTime = timeUtil.parseTime(entry.time);
+                            const newTime = timeUtil.parseTime(editor.time);
+                            entry.time = [...timeUtil.addTime(savedTime, newTime).values()].join(":");
+                            finalData.push(entry);
+                        }
+                    });
+                    if (entry.close) {
+                        console.log(finalData);
+                        finalData.push(entry);
+                    }
+                });
+                utils.saveFile(fileName, JSON.stringify(finalData));
+                if (!isNaN(index)) {
+                    runningEditorNames = utils.deleteItem(runningEditorNames, index);
+                    runningEditors = utils.deleteItem(runningEditors, index);
+                }
+            });
+        } else {
+            // File doesn't exist.
+            console.log(JSON.stringify(initData));
+            utils.saveFile(fileName, initData);
+            if (!isNaN(index)) {
+                runningEditorNames = utils.deleteItem(runningEditorNames, index);
+                runningEditors = utils.deleteItem(runningEditors, index);
+            }
+        }
+    });
 }
 
 /**
