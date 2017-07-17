@@ -4,7 +4,7 @@ const exec = require('child_process').exec;
 const spawn = require('child_process').spawn
 const chalk = require('chalk');
 const codeEditors = ['code', 'atom', 'subl', 'webstorm', 'nano', 'studio', 'idea'];
-const runningEditors = [];
+let runningEditors = [];
 let runningEditorNames = [];
 const refreshTime = 1000;
 let count = 0;
@@ -43,16 +43,15 @@ function addEditor(data, codeEditor) {
 
             runningEditorNames.push(codeEditor);
         } else {
-            runningEditors.forEach(function (codeEditor) {
+            runningEditors.forEach((codeEditor, index) => {
                 let time;
                 exec(`ps -eo comm,etime | grep ${codeEditor.name} | head -1`, (error, stdout, stderr) => {
                     let timeString = stdout.toString().trim().match(/\d{1,3}/g);
 
                     // Editor has been closed
                     if (!timeString) {
-                        const index = runningEditorNames.indexOf(codeEditor.name);
-                        runningEditorNames = [...runningEditorNames.slice(0, index), ...runningEditorNames.slice(index + 1)];
-                        runningEditors.delete(codeEditor);
+                        runningEditorNames = deleteItem(runningEditorNames, index);
+                        runningEditors = deleteItem(runningEditors, index)
                         save(codeEditor);
                         return;
                     };
@@ -69,6 +68,7 @@ function display() {
     term('\033c');
 
     // Metadata gone. Print again.
+    displayMetadata();
 
     runningEditors.forEach((editor, index) => {
         const name = editor.name;
@@ -77,11 +77,11 @@ function display() {
             term('Loading..')
             return;
         } else {
-            displayMetadata();
-            const time = chalk.green(editor.time);
             hideCursor();
-            const escapeString = "\033[" + (2 + index + 5) + ";0f";
-            term(index);
+
+            const time = chalk.green(editor.time);
+            const escapeString = "\033[" + (2 + index) + ";0f";
+
             term(`${escapeString} ${fullName}: ${time}`);
         }
     })
@@ -117,3 +117,28 @@ function hideCursor() {
 function term() {
     console.log([...arguments].join(""));
 }
+
+function deleteItem(array, index) {
+    return [...array.slice(0, index), ...array.slice(index + 1)];
+}
+
+/**
+ * https://stackoverflow.com/a/14861513/2231031
+ */
+if (process.platform === "win32") {
+    var rl = require("readline").createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+
+    rl.on("SIGINT", function () {
+        process.emit("SIGINT");
+    });
+}
+
+process.on("SIGINT", function () {
+    
+    // Clear console
+    console.log("\033c");
+    process.exit();
+});
