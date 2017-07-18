@@ -10,12 +10,16 @@ let runningEditors = [];
 let runningEditorNames = [];
 const refreshTime = 1000;
 let count = 0;
+let fileDataIndex = 0;
 const saveTime = 5;
+const ESC = "\033[";
+let fileStore = [];
 
-displayMetadata();
 utils.hideCursor();
-
+displayMetadata();
+displayPast();
 setInterval(execProcess, refreshTime);
+
 
 function execProcess() {
     count++;
@@ -71,10 +75,11 @@ function addResult(codeEditor, index) {
 }
 
 function display() {
-    // utils.term('\033c');
+    utils.term('\033c');
 
     // Metadata gone. Print again.
     displayMetadata();
+    displayPast(true);
 
     runningEditors.forEach((editor, index) => {
         const name = editor.name;
@@ -86,21 +91,53 @@ function display() {
             utils.hideCursor();
 
             const time = chalk.green(editor.time);
-            const escapeString = "\033[" + (2 + index) + ";0f";
+            const escapeString = "\033[" + (5 + fileDataIndex + index) + ";0f";
 
             utils.term(`${escapeString} ${fullName}: ${time}`);
         }
     })
 }
 
+function displayPast(flag) {
+    const date = new Date();
+    const lastDay = new Date(date.setDate(date.getDate()))
+        .toDateString()
+        .split(" ")
+        .join("-");
+
+    if (!flag) {
+
+        const fileName = `codespell-${lastDay}.json`;
+        fs.readFile(fileName, (err, data) => {
+            if (err) return;
+            const fileData = JSON.parse(data.toString());
+
+            utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split("-").join(" ")}`);
+
+            fileData.forEach((entry, index) => {
+                utils.term(`${ESC}${3 + index * 2};0f${editors[entry.name]}: ${entry.time}`);
+            });
+
+            fileDataIndex = fileData.length * 2;
+            utils.term(`${ESC}${3 + fileDataIndex};0f${chalk.bgRed(date.toDateString())}`);
+            fileStore = [...fileData];
+        });
+    } else {
+        utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split("-").join(" ")}`);
+        fileStore.forEach((entry, index) => {
+            utils.term(`${ESC}${3 + index * 2};0f${editors[entry.name]}: ${entry.time}`);
+        });
+        utils.term(`${ESC}${3 + fileDataIndex};0f${chalk.bgRed(date.toDateString())}`);
+    }
+}
+
 function displayMetadata() {
     utils.term('\033c');
 
-    utils.getConsoleSize((cols, lines) => {
+    utils.getConsoleSize((columns, lines) => {
         const title = chalk.bgBlue.white('CodeSpell');
-        utils.term("\033[1;" + (Math.floor(cols / 2) - 2) + "f" + title);
+        utils.term(`${ESC}` + "1;" + (Math.floor(columns / 2) - 3) + "f" + title);
     });
-
 };
 
 function save(codeEditors, index) {
