@@ -1,34 +1,25 @@
 function parseTime(time) {
-    if (!time) return {
-        seconds: 0,
-        minutes: 0
-    };
-    const timeString = time.match(/\d{1,3}/g);
-    const seconds = timeString[timeString.length - 1];
-    const minutes = timeString[timeString.length - 2];
-    const result = {
-        seconds,
-        minutes
-    };
-    if (timeString.length > 2) {
-        const hours = timeString[0];
-        result['hours'] = hours;
+    if (!time) {
+        return [0, 0, 0];
+    }
+    let timeString = time.match(/\d{1,3}/g).map((num) => {
+        return parseInt(num, 10)
+    });
+
+    if(timeString.length < 3){
+        timeString.unshift(0);
     }
 
-    return result;
+    return timeString;
 }
 
 
 function addTime(time1, time2) {
-    const time = {};
-    time['seconds'] = time1.seconds + time2.seconds;
-    time['minutes'] = time1.minutes + time2.minutes;
-    if (time1.hours && time2.hours) {
-        time['hours'] = time1.hours + time2.hours;
-    } else if (time1.hours || time2.hours) {
-        time['hours'] = time1.hours || time2.hours;
-    }
-    return time;
+    let array = time1.map((item, index)=>{
+        return item + time2[index];
+    });
+
+    return array;
 };
 
 module.exports = {

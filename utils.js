@@ -1,5 +1,5 @@
 const spawn = require('child_process').spawn
-
+const fs = require('fs');
 function getConsoleSize(cb) {
     spawn('resize').stdout.on('data', function (data) {
         data = String(data)
