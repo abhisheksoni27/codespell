@@ -1,21 +1,11 @@
-const spawn = require('./promises/spawn');
+const exec = require('./promises/exec');
 const fs = require('./promises/fs');
 
-function getConsoleSize() {
-    return new Promise((resolve, reject) => {
-        spawn('resize')
-            .then((data) => {
-                const dataString = String(data);
-                let lines = data.split('\n');
-                lines = Number(lines[1].match(/^LINES=([0-9]+);$/)[1]);
-                let cols = Number(lines[0].match(/^COLUMNS=([0-9]+);$/)[1]);
-                resolve(lines, cols);
-            })
-            .catch((err) => {
-                reject(err);
-            })
-    });
-
+function getConsoleSize(stdout) {
+    const dataString = String(stdout);
+    let lines = dataString.split('\n');
+    let cols = Number(lines[0].match(/^COLUMNS=([0-9]+);$/)[1]);
+    return cols;
 }
 
 function hideCursor() {
@@ -31,7 +21,7 @@ function deleteItem(array, index) {
 }
 
 function saveFile(fileName, data) {
-   return fs.writeFileAsync(fileName, data)
+    return fs.writeFileAsync(fileName, data)
 }
 
 module.exports = {

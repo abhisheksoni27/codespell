@@ -20,7 +20,9 @@ const ESC = '\033[';
 let fileStore = [];
 
 utils.hideCursor();
-displayMetadata();
+
+displayMetadata()
+
 displayPast();
 setInterval(execProcess, refreshTime);
 
@@ -149,11 +151,13 @@ function displayPast(flag) {
 
 function displayMetadata() {
     utils.term('\033c');
-    utils.getConsoleSize()
-        .then((lines, columns) => {
-            const title = chalk.bgBlue.white('CodeSpell');
+    const title = chalk.bgBlue.white('CodeSpell');
+    exec('resize')
+        .then((stdout, stderr) => {
+            const columns = utils.getConsoleSize(stdout);
             utils.term(`${ESC}` + '1;' + (Math.floor(columns / 2) - 3) + 'f' + title);
-        });
+        })
+        .catch(errCallback);
 };
 
 function save(codeEditors, index) {
@@ -261,6 +265,6 @@ if (process.platform === 'win32') {
 process.on('SIGINT', function () {
 
     // Clear console
-    // console.log('\033c');
+    console.log('\033c');
     process.exit();
 });
