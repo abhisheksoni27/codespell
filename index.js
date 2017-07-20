@@ -33,7 +33,6 @@ displayPast();
 
 setInterval(execProcess, refreshTime);
 
-
 function execProcess() {
     count++;
     codeEditors.forEach(execAndAdd);
@@ -64,9 +63,9 @@ function addEditor(data, codeEditor) {
             });
 
             runningEditorNames.push(codeEditor);
-        } else {
-            runningEditors.forEach(addResult);
         }
+        runningEditors.forEach(addResult);
+
     }
 };
 
@@ -101,8 +100,7 @@ function display() {
     runningEditors.forEach((editor, index) => {
         const name = editor.name;
         const fullName = chalk[colors[index * 2]].white(editors[name]) + laptop;
-        if (!editor.time) {
-
+        if ((!editor.time) && (!editor.close)) {
             (index === 0) ? utils.term('\nLoading..'): utils.term('Loading..');
             return;
         } else {
@@ -118,7 +116,8 @@ function display() {
 
 function displayPast(flag) {
     const date = new Date();
-    const lastDay = new Date(date.setDate(date.getDate()))
+    const today = date.toDateString();
+    const lastDay = new Date(date.setDate(date.getDate() - 1))
         .toDateString()
         .split(' ')
         .join('-');
@@ -141,20 +140,24 @@ function displayPast(flag) {
                 });
 
                 fileDataIndex = fileData.length * 2;
-                utils.term(`${ESC}${3 + fileDataIndex};0f${chalk.bgRed(date.toDateString())}`);
+                utils.term(`${ESC}${3 + fileDataIndex};0f${chalk.bgRed(today)}`);
                 fileStore = [...fileData];
 
             })
-            .catch(errCallback);
+            .catch((err) => {
+                return err;
+            });
 
     } else {
         utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
+
         fileStore.forEach((entry, index) => {
             const name = chalk[randomColor()].white(editors[entry.name]);
             const time = chalk.blue(entry.time);
             utils.term(`${ESC}${4 + index};2f${name} ${laptop}: ${time} ${boom}`);
         });
-        utils.term(`${ESC}${3 + fileDataIndex};0f${chalk.bgRed(date.toDateString())}`);
+
+        utils.term(`${ESC}${4 + fileDataIndex};0f${chalk.bgRed(today)}`);
     }
 }
 
@@ -176,8 +179,8 @@ function save(codeEditors, index) {
     const initData = JSON.stringify(codeEditors);
     const date = new Date().toDateString().split(' ').join('-');
     let fileName = `codespell-${date}.json`;
-    // const home = require('os').homedir();
-    // fileName = home + '/.codespell/' + fileName;
+    const home = require('os').homedir();
+    fileName = home + '/.codespell/' + fileName;
 
     fs.statAsync(fileName)
         .then((stats) => {
@@ -223,7 +226,7 @@ function save(codeEditors, index) {
                         finalData.push({
                             name,
                             time: time.join(':'),
-                            close: false
+                            close: !closedEditor.close
                         });
                     }
                 });
@@ -244,14 +247,12 @@ function save(codeEditors, index) {
         .then((finalData) => {
             return utils.saveFile(fileName, JSON.stringify(finalData));
         })
-        .catch(errCallback)
         .then(() => {
             if (!isNaN(index)) {
                 runningEditorNames = utils.deleteItem(runningEditorNames, index);
                 runningEditors = utils.deleteItem(runningEditors, index);
             }
         })
-        .catch(errCallback);
 }
 
 function errCallback(err) {
