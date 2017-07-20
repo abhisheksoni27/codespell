@@ -1,18 +1,20 @@
+const editor = '';
 function addTime(time1, time2) {
     let array = time1.map((item, index) => {
         let sum = item + time2[index]
         return sum;
     });
 
+    if (array[2] > 60) {
+        array[2] -= 60;
+        array[1]++;
+    }
+    
     if (array[1] > 60) {
         array[1] -= 60;
         array[0]++;
     }
 
-    if (array[2] > 60) {
-        array[2] -= 60;
-        array[1]++;
-    }
 
     return array;
 }
@@ -36,18 +38,20 @@ function parseTime(time) {
 }
 
 function incrementTime(time) {
+    
     const incrementedTime = parseTime(time);
-    incrementedTime[incrementedTime.length - 1] += 1;
-
-    if (incrementedTime[1] > 60) {
-        incrementedTime[1] -= 60;
-        incrementedTime[0]++;
-    }
+    incrementedTime[2] += 1;
 
     if (incrementedTime[2] > 60) {
         incrementedTime[2] -= 60;
         incrementedTime[1]++;
     }
+
+    if (incrementedTime[1] > 60) {
+        incrementedTime[1] -= 60;
+        incrementedTime[0]++;
+    }
+    
     return incrementedTime;
 }
 

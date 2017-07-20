@@ -43,10 +43,13 @@ function execProcess() {
     }
 }
 
-function execAndAdd(codeEditor) {
+function execAndAdd(codeEditor, index) {
     const top = exec(`ps ax | grep ${codeEditor} -c`)
         .then((stdout, stderr) => {
             let data = String(stdout).trim();
+            return data;
+        })
+        .then((data) => {
             addEditor(data, codeEditor);
         })
         .catch(errCallback);
@@ -63,15 +66,14 @@ function addEditor(data, codeEditor) {
             });
 
             runningEditorNames.push(codeEditor);
+        } else {
+            runningEditors.forEach(addResult);
         }
-        runningEditors.forEach(addResult);
-
     }
 };
 
 function addResult(codeEditor, index) {
     let time;
-
     exec(`ps -eo comm,etime | grep ${codeEditor.name} | head -1`)
         .then((stdout, stderr) => {
             let timeString = String(stdout).trim().match(/\d{1,3}/g);
@@ -82,9 +84,14 @@ function addResult(codeEditor, index) {
                 return;
             };
 
+            const timeOne = 
+            timeUtils
+            .incrementTime(codeEditor.time, codeEditor.name, runningEditorNames.length)
+            .join(':');
+
             time = codeEditor.time ?
-                timeUtils.incrementTime(codeEditor.time).join(":") :
-                timeString.join(":");
+                timeOne :
+                timeString.join(':');
 
             codeEditor['time'] = time;
         });
@@ -220,7 +227,7 @@ function save(codeEditors, index) {
                             return editor.name === name
                         });
 
-                        closedEditor.time = time.join(":");
+                        closedEditor.time = time.join(':');
                         runningEditors[closedEditorIndex] = closedEditor;
 
                         finalData.push({
