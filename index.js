@@ -8,7 +8,9 @@ const fs = require('./promises/fs');
 
 const codeEditors = ['atom', 'subl', 'webstorm', 'nano', 'studio', 'idea'];
 let colors = ['blue', 'red', 'green', 'grey', 'cyan'];
-const laptop = chalk.white('💻');
+const laptop = '💻';
+const boom = '💥'
+const sparkles = '✨'
 const ESC = '\033[';
 
 let runningEditors = [];
@@ -40,7 +42,7 @@ function execProcess() {
 function execAndAdd(codeEditor) {
     const top = exec(`ps ax | grep ${codeEditor} -c`)
         .then((stdout, stderr) => {
-            let data = stdout.toString().trim();
+            let data = String(stdout).trim();
             addEditor(data, codeEditor);
         })
         .catch(errCallback);
@@ -68,7 +70,7 @@ function addResult(codeEditor, index) {
 
     exec(`ps -eo comm,etime | grep ${codeEditor.name} | head -1`)
         .then((stdout, stderr) => {
-            let timeString = stdout.toString().trim().match(/\d{1,3}/g);
+            let timeString = String(stdout).trim().match(/\d{1,3}/g);
 
             if (!timeString) {
                 codeEditor.close = !codeEditor.close;
@@ -95,7 +97,8 @@ function display() {
         const name = editor.name;
         const fullName = chalk.blue(editors[name]) + laptop;
         if (!editor.time) {
-            utils.term('Loading..')
+            
+            (index===0) ? utils.term('\nLoading..') : utils.term('Loading..');
             return;
         } else {
             utils.hideCursor();
@@ -103,7 +106,7 @@ function display() {
             const time = chalk.green(editor.time);
             const escapeString = '\033[' + (5 + fileDataIndex + index) + ';0f';
 
-            utils.term(`${escapeString} ${fullName}: ${time}`);
+            utils.term(`${escapeString} ${fullName}: ${time} ${sparkles}`);
         }
     })
 }
@@ -121,14 +124,15 @@ function displayPast(flag) {
 
         fs.readFileAsync(fileName)
             .then((data) => {
-                const fileData = JSON.parse(data.toString());
+                const fileData = JSON.parse(String(data));
 
                 utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
 
                 fileData.forEach((entry, index) => {
-                    const name = editors[entry.name];
-                    const time = entry.time;
-                    utils.term(`${ESC}${3 + index * 2};0f${name} ${laptop}: ${time}`);
+                    const name = chalk[randomColor()](editors[entry.name]);
+                    const time = chalk[randomColor()](entry.time);
+                    chalk.black
+                    utils.term(`${ESC}${4 + index};2f${name} ${laptop}: ${time} ${boom}`);
                 });
 
                 fileDataIndex = fileData.length * 2;
@@ -141,9 +145,9 @@ function displayPast(flag) {
     } else {
         utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
         fileStore.forEach((entry, index) => {
-            const name = editors[entry.name];
-            const time = entry.time;
-            utils.term(`${ESC}${3 + index * 2};0f${name} ${laptop}: ${time}`);
+            const name = chalk[randomColor()](editors[entry.name]);
+            const time = chalk[randomColor()](entry.time);
+            utils.term(`${ESC}${4 + index};2f${name} ${laptop}: ${time} ${boom}`);
         });
         utils.term(`${ESC}${3 + fileDataIndex};0f${chalk.bgRed(date.toDateString())}`);
     }
@@ -181,7 +185,7 @@ function save(codeEditors, index) {
         })
         .then((data) => {
             let finalData = [];
-            const fileData = JSON.parse(data.toString());
+            const fileData = JSON.parse(String(data));
             const closed = fileData.filter(entry => entry.close);
             const tempData = [...fileData, ...codeEditors];
             if (!(closed.length > 0)) {
@@ -196,7 +200,7 @@ function save(codeEditors, index) {
                         finalData.push(c[0]);
                     } else {
 
-                        let time = timeUtils.parseTime('00:00');
+                        let time = timeUtils.parseTime('00:00:00');
 
                         c.forEach((entry) => {
                             const entryTime = timeUtils.parseTime(entry.time);
@@ -209,6 +213,7 @@ function save(codeEditors, index) {
                         const closedEditorIndex = runningEditors.findIndex((editor) => {
                             return editor.name === name
                         });
+
                         closedEditor.time = time.join(":");
                         runningEditors[closedEditorIndex] = closedEditor;
 
@@ -246,6 +251,10 @@ function save(codeEditors, index) {
 
 function errCallback(err) {
     throw new Error(err);
+}
+
+function randomColor() {
+    return colors[Math.floor(Math.random() * 5)];
 }
 
 /**
