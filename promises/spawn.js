@@ -20,10 +20,4 @@ function spawnAsync(command) {
     });
 }
 
-spawnAsync('resize').then((data) => {
-    console.log(data)
-}).catch(err => {
-    throw new Error(err)
-});
-
 module.exports = spawnAsync;

@@ -6,8 +6,12 @@ const utils = require('./utils.js');
 const exec = require('./promises/exec');
 const fs = require('./promises/fs');
 
-const codeEditors = ['atom', 'subl', 'webstorm', 'nano', 'studio', 'idea'];
-let colors = ['blue', 'red', 'green', 'grey', 'cyan'];
+const codeEditors = ['code', 'atom', 'subl', 'webstorm', 'nano', 'studio', 'idea'];
+let colors = [
+    'bgBlack', 'bgRed', 'bgGreen',
+    'bgCyan', 'bgBlue', 'bgMagenta', 'bgYellow'
+];
+
 const laptop = '💻';
 const boom = '💥'
 const sparkles = '✨'
@@ -22,6 +26,7 @@ const saveTime = 5;
 let fileStore = [];
 
 utils.hideCursor();
+utils.term('\033c');
 
 displayMetadata()
 displayPast();
@@ -95,15 +100,15 @@ function display() {
 
     runningEditors.forEach((editor, index) => {
         const name = editor.name;
-        const fullName = chalk.blue(editors[name]) + laptop;
+        const fullName = chalk[colors[index * 2]].white(editors[name]) + laptop;
         if (!editor.time) {
-            
-            (index===0) ? utils.term('\nLoading..') : utils.term('Loading..');
+
+            (index === 0) ? utils.term('\nLoading..'): utils.term('Loading..');
             return;
         } else {
             utils.hideCursor();
 
-            const time = chalk.green(editor.time);
+            const time = chalk.yellow(editor.time);
             const escapeString = '\033[' + (5 + fileDataIndex + index) + ';0f';
 
             utils.term(`${escapeString} ${fullName}: ${time} ${sparkles}`);
@@ -129,8 +134,8 @@ function displayPast(flag) {
                 utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
 
                 fileData.forEach((entry, index) => {
-                    const name = chalk[randomColor()](editors[entry.name]);
-                    const time = chalk[randomColor()](entry.time);
+                    const name = chalk[randomColor()].white(editors[entry.name]);
+                    const time = chalk.blue(entry.time);
                     chalk.black
                     utils.term(`${ESC}${4 + index};2f${name} ${laptop}: ${time} ${boom}`);
                 });
@@ -145,8 +150,8 @@ function displayPast(flag) {
     } else {
         utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
         fileStore.forEach((entry, index) => {
-            const name = chalk[randomColor()](editors[entry.name]);
-            const time = chalk[randomColor()](entry.time);
+            const name = chalk[randomColor()].white(editors[entry.name]);
+            const time = chalk.blue(entry.time);
             utils.term(`${ESC}${4 + index};2f${name} ${laptop}: ${time} ${boom}`);
         });
         utils.term(`${ESC}${3 + fileDataIndex};0f${chalk.bgRed(date.toDateString())}`);
@@ -154,7 +159,6 @@ function displayPast(flag) {
 }
 
 function displayMetadata() {
-    utils.term('\033c');
     const title = chalk.bgBlue.white('CodeSpell');
     exec('resize')
         .then((stdout, stderr) => {
@@ -166,7 +170,6 @@ function displayMetadata() {
 
 function save(codeEditors, index) {
     if (codeEditors.length === 0) {
-        console.log('here');
         return;
     }
 
@@ -241,20 +244,22 @@ function save(codeEditors, index) {
         .then((finalData) => {
             return utils.saveFile(fileName, JSON.stringify(finalData));
         })
+        .catch(errCallback)
         .then(() => {
             if (!isNaN(index)) {
                 runningEditorNames = utils.deleteItem(runningEditorNames, index);
                 runningEditors = utils.deleteItem(runningEditors, index);
             }
-        });
+        })
+        .catch(errCallback);
 }
 
 function errCallback(err) {
-    throw new Error(err);
+    return err;
 }
 
 function randomColor() {
-    return colors[Math.floor(Math.random() * 5)];
+    return colors[Math.floor(Math.random() * 7)];
 }
 
 /**
