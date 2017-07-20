@@ -2,8 +2,10 @@ const editors = require('./editors.js');
 const timeUtils = require('./timeUtil.js');
 const utils = require('./utils.js');
 
-const exec = require('child_process').exec;
-const fs = require('fs');
+// const exec = require('child_process').exec;
+const exec = require('./promises/exec');
+// const fs = require('fs');
+const fs = require('./promises/fs');
 const chalk = require('chalk');
 const codeEditors = ['atom', 'subl', 'webstorm', 'nano', 'studio', 'idea'];
 let runningEditors = [];
@@ -34,12 +36,12 @@ function execProcess() {
 }
 
 function execAndAdd(codeEditor) {
-    const top = exec(`ps ax | grep ${codeEditor} -c`, (error, stdout, stderr) => {
-        if (!error) {
+    const top = exec(`ps ax | grep ${codeEditor} -c`)
+        .then((stdout, stderr) => {
             let data = stdout.toString().trim();
             addEditor(data, codeEditor);
-        }
-    });
+        })
+        .catch(errCallback);
 }
 
 function addEditor(data, codeEditor) {
@@ -61,22 +63,23 @@ function addEditor(data, codeEditor) {
 
 function addResult(codeEditor, index) {
     let time;
-    exec(`ps -eo comm,etime | grep ${codeEditor.name} | head -1`, (error, stdout, stderr) => {
-        let timeString = stdout.toString().trim().match(/\d{1,3}/g);
 
-        // Editor has been closed
-        if (!timeString) {
-            codeEditor.close = !codeEditor.close;
-            save(runningEditors, index);
-            return;
-        };
+    exec(`ps -eo comm,etime | grep ${codeEditor.name} | head -1`)
+        .then((stdout, stderr) => {
+            let timeString = stdout.toString().trim().match(/\d{1,3}/g);
 
-        time = codeEditor.time 
-        ? timeUtils.incrementTime(codeEditor.time).join(":") 
-        : timeString.join(":");
+            if (!timeString) {
+                codeEditor.close = !codeEditor.close;
+                save(runningEditors, index);
+                return;
+            };
 
-        codeEditor['time'] = time;
-    });
+            time = codeEditor.time ?
+                timeUtils.incrementTime(codeEditor.time).join(":") :
+                timeString.join(":");
+
+            codeEditor['time'] = time;
+        });
 }
 
 function display() {
@@ -113,22 +116,26 @@ function displayPast(flag) {
     if (!flag) {
 
         const fileName = `codespell-${lastDay}.json`;
-        fs.readFile(fileName, (err, data) => {
-            if (err) return;
-            const fileData = JSON.parse(data.toString());
 
-            utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
+        fs.readFileAsync(fileName)
+            .then((data) => {
+                const fileData = JSON.parse(data.toString());
 
-            fileData.forEach((entry, index) => {
-                const name = editors[entry.name];
-                const time = entry.time;
-                utils.term(`${ESC}${3 + index * 2};0f${name} ${laptop}: ${time}`);
-            });
+                utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
 
-            fileDataIndex = fileData.length * 2;
-            utils.term(`${ESC}${3 + fileDataIndex};0f${chalk.bgRed(date.toDateString())}`);
-            fileStore = [...fileData];
-        });
+                fileData.forEach((entry, index) => {
+                    const name = editors[entry.name];
+                    const time = entry.time;
+                    utils.term(`${ESC}${3 + index * 2};0f${name} ${laptop}: ${time}`);
+                });
+
+                fileDataIndex = fileData.length * 2;
+                utils.term(`${ESC}${3 + fileDataIndex};0f${chalk.bgRed(date.toDateString())}`);
+                fileStore = [...fileData];
+
+            })
+            .catch(errCallback);
+
     } else {
         utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
         fileStore.forEach((entry, index) => {
@@ -142,11 +149,11 @@ function displayPast(flag) {
 
 function displayMetadata() {
     utils.term('\033c');
-
-    utils.getConsoleSize((columns, lines) => {
-        const title = chalk.bgBlue.white('CodeSpell');
-        utils.term(`${ESC}` + '1;' + (Math.floor(columns / 2) - 3) + 'f' + title);
-    });
+    utils.getConsoleSize()
+        .then((lines, columns) => {
+            const title = chalk.bgBlue.white('CodeSpell');
+            utils.term(`${ESC}` + '1;' + (Math.floor(columns / 2) - 3) + 'f' + title);
+        });
 };
 
 function save(codeEditors, index) {
@@ -154,89 +161,87 @@ function save(codeEditors, index) {
         console.log('here');
         return;
     }
+
     const initData = JSON.stringify(codeEditors);
     const date = new Date().toDateString().split(' ').join('-');
     let fileName = `codespell-${date}.json`;
     // const home = require('os').homedir();
     // fileName = home + '/.codespell/' + fileName;
 
-    fs.stat(fileName, (err, exists) => {
-        //File Exists   
-        if (exists) {
-            // Read File
-            fs.readFile(fileName, (err, data) => {
-                if (err) throw new Error(err);
+    fs.statAsync(fileName)
+        .then((stats) => {
+            if (stats) return fs.readFileAsync(fileName);
+        })
+        .catch((err) => {
+            return utils.saveFile(fileName, initData);
+        })
+        .then((data) => {
+            let finalData = [];
+            const fileData = JSON.parse(data.toString());
+            const closed = fileData.filter(entry => entry.close);
+            const tempData = [...fileData, ...codeEditors];
+            if (!(closed.length > 0)) {
+                finalData = [...codeEditors];
+            } else {
+                const closedNames = closed.map(entry => entry.name);
 
-                let finalData = [];
-                const fileData = JSON.parse(data.toString());
-                const closed = fileData.filter(entry => entry.close);
-                const tempData = [...fileData, ...codeEditors];
+                closedNames.forEach(name => {
+                    const c = tempData.filter(data => data.name === name);
 
-                if (!(closed.length > 0)) {
-                    finalData = [...codeEditors];
-                } else {
+                    if (c.length === 1) {
+                        finalData.push(c[0]);
+                    } else {
 
-                    const closedNames = closed.map(entry => entry.name);
+                        let time = timeUtils.parseTime('00:00');
 
-                    closedNames.forEach(name => {
-                        const c = tempData.filter(data => data.name === name);
+                        c.forEach((entry) => {
+                            const entryTime = timeUtils.parseTime(entry.time);
+                            time = timeUtils.addTime(time, entryTime);
+                        });
 
-                        if (c.length === 1) {
-                            finalData.push(c[0]);
-                        } else {
+                        const closedEditor = runningEditors.find((editor) => {
+                            return editor.name === name
+                        });
+                        const closedEditorIndex = runningEditors.findIndex((editor) => {
+                            return editor.name === name
+                        });
+                        closedEditor.time = time.join(":");
+                        runningEditors[closedEditorIndex] = closedEditor;
 
-                            let time = timeUtils.parseTime('00:00');
+                        finalData.push({
+                            name,
+                            time: time.join(':'),
+                            close: false
+                        });
+                    }
+                });
 
-                            c.forEach((entry) => {
-                                const entryTime = timeUtils.parseTime(entry.time);
-                                time = timeUtils.addTime(time, entryTime);
-                            });
+                const notClosed = codeEditors.filter((entry) => {
+                    if (closedNames.indexOf(entry.name) === -1) {
+                        return true;
+                    }
+                    return false;
+                });
 
-                            const closedEditor = runningEditors.find((editor) => {
-                                return editor.name === name
-                            });
-                            const closedEditorIndex = runningEditors.findIndex((editor) => {
-                                return editor.name === name
-                            });
-                            closedEditor.time = time.join(":");
-                            runningEditors[closedEditorIndex] = closedEditor;
-
-                            finalData.push({
-                                name,
-                                time: time.join(':'),
-                                close: false
-                            });
-                        }
-                    });
-
-                    const notClosed = codeEditors.filter((entry) => {
-                        if (closedNames.indexOf(entry.name) === -1) {
-                            return true;
-                        }
-                        return false;
-                    });
-
-                    notClosed.forEach((entry) => {
-                        finalData.push(entry)
-                    });
-
-                }
-
-                utils.saveFile(fileName, JSON.stringify(finalData));
-                if (!isNaN(index)) {
-                    runningEditorNames = utils.deleteItem(runningEditorNames, index);
-                    runningEditors = utils.deleteItem(runningEditors, index);
-                }
-            });
-        } else {
-            // File doesn't exist.
-            utils.saveFile(fileName, initData);
+                notClosed.forEach((entry) => {
+                    finalData.push(entry)
+                });
+            }
+            return finalData;
+        })
+        .then((finalData) => {
+            return utils.saveFile(fileName, JSON.stringify(finalData));
+        })
+        .then(() => {
             if (!isNaN(index)) {
                 runningEditorNames = utils.deleteItem(runningEditorNames, index);
                 runningEditors = utils.deleteItem(runningEditors, index);
             }
-        }
-    });
+        });
+}
+
+function errCallback(err) {
+    throw new Error(err);
 }
 
 /**
@@ -256,6 +261,6 @@ if (process.platform === 'win32') {
 process.on('SIGINT', function () {
 
     // Clear console
-    console.log('\033c');
+    // console.log('\033c');
     process.exit();
 });

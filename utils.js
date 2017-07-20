@@ -1,14 +1,21 @@
-const spawn = require('child_process').spawn
-const fs = require('fs');
-function getConsoleSize(cb) {
-    spawn('resize').stdout.on('data', function (data) {
-        data = String(data)
-        var lines = data.split('\n'),
-            cols = Number(lines[0].match(/^COLUMNS=([0-9]+);$/)[1]),
-            lines = Number(lines[1].match(/^LINES=([0-9]+);$/)[1])
-        if (cb)
-            cb(cols, lines)
-    })
+const spawn = require('./promises/spawn');
+const fs = require('./promises/fs');
+
+function getConsoleSize() {
+    return new Promise((resolve, reject) => {
+        spawn('resize')
+            .then((data) => {
+                const dataString = String(data);
+                let lines = data.split('\n');
+                lines = Number(lines[1].match(/^LINES=([0-9]+);$/)[1]);
+                let cols = Number(lines[0].match(/^COLUMNS=([0-9]+);$/)[1]);
+                resolve(lines, cols);
+            })
+            .catch((err) => {
+                reject(err);
+            })
+    });
+
 }
 
 function hideCursor() {
@@ -24,15 +31,7 @@ function deleteItem(array, index) {
 }
 
 function saveFile(fileName, data) {
-    fs.writeFile(fileName, data, (err) => {
-        if (err) {
-            fs.mkdir(home + '/.codespell', (err) => {
-                if (err) throw new Error(err);
-                saveFile(fileName, data);
-            });
-        }
-        return true;
-    });
+   return fs.writeFileAsync(fileName, data)
 }
 
 module.exports = {

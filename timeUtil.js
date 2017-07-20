@@ -38,6 +38,16 @@ function parseTime(time) {
 function incrementTime(time) {
     const incrementedTime = parseTime(time);
     incrementedTime[incrementedTime.length - 1] += 1;
+
+    if (incrementedTime[1] > 60) {
+        incrementedTime[1] -= 60;
+        incrementedTime[0]++;
+    }
+
+    if (incrementedTime[2] > 60) {
+        incrementedTime[2] -= 60;
+        incrementedTime[1]++;
+    }
     return incrementedTime;
 }
 
