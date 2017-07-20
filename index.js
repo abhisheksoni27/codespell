@@ -1,29 +1,29 @@
+const chalk = require('chalk');
+
 const editors = require('./editors.js');
 const timeUtils = require('./timeUtil.js');
 const utils = require('./utils.js');
-
-// const exec = require('child_process').exec;
 const exec = require('./promises/exec');
-// const fs = require('fs');
 const fs = require('./promises/fs');
-const chalk = require('chalk');
+
 const codeEditors = ['atom', 'subl', 'webstorm', 'nano', 'studio', 'idea'];
+let colors = ['blue', 'red', 'green', 'grey', 'cyan'];
+const laptop = chalk.white('💻');
+const ESC = '\033[';
+
 let runningEditors = [];
 let runningEditorNames = [];
 const refreshTime = 1000;
 let count = 0;
 let fileDataIndex = 0;
-let colors = ['blue', 'red', 'green', 'grey', 'cyan'];
 const saveTime = 5;
-const laptop = chalk.white('💻');
-const ESC = '\033[';
 let fileStore = [];
 
 utils.hideCursor();
 
 displayMetadata()
-
 displayPast();
+
 setInterval(execProcess, refreshTime);
 
 
