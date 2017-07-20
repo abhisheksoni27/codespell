@@ -5,14 +5,16 @@ const utils = require('./utils.js');
 const exec = require('child_process').exec;
 const fs = require('fs');
 const chalk = require('chalk');
-const codeEditors = ['code', 'atom', 'subl', 'webstorm', 'nano', 'studio', 'idea'];
+const codeEditors = ['atom', 'subl', 'webstorm', 'nano', 'studio', 'idea'];
 let runningEditors = [];
 let runningEditorNames = [];
 const refreshTime = 1000;
 let count = 0;
 let fileDataIndex = 0;
+let colors = ['blue', 'red', 'green', 'grey', 'cyan'];
 const saveTime = 5;
-const ESC = "\033[";
+const laptop = chalk.white('💻');
+const ESC = '\033[';
 let fileStore = [];
 
 utils.hideCursor();
@@ -26,7 +28,7 @@ function execProcess() {
     codeEditors.forEach(execAndAdd);
     display();
 
-    if (!(count % saveTime)) {
+    if (!(count % saveTime) && runningEditors.length > 0) {
         save(runningEditors);
     }
 }
@@ -69,7 +71,10 @@ function addResult(codeEditor, index) {
             return;
         };
 
-        time = timeString.join(':');
+        time = codeEditor.time 
+        ? timeUtils.incrementTime(codeEditor.time).join(":") 
+        : timeString.join(":");
+
         codeEditor['time'] = time;
     });
 }
@@ -83,7 +88,7 @@ function display() {
 
     runningEditors.forEach((editor, index) => {
         const name = editor.name;
-        const fullName = chalk.blue(editors[name]) + chalk.white('💻');
+        const fullName = chalk.blue(editors[name]) + laptop;
         if (!editor.time) {
             utils.term('Loading..')
             return;
@@ -91,7 +96,7 @@ function display() {
             utils.hideCursor();
 
             const time = chalk.green(editor.time);
-            const escapeString = "\033[" + (5 + fileDataIndex + index) + ";0f";
+            const escapeString = '\033[' + (5 + fileDataIndex + index) + ';0f';
 
             utils.term(`${escapeString} ${fullName}: ${time}`);
         }
@@ -102,8 +107,8 @@ function displayPast(flag) {
     const date = new Date();
     const lastDay = new Date(date.setDate(date.getDate()))
         .toDateString()
-        .split(" ")
-        .join("-");
+        .split(' ')
+        .join('-');
 
     if (!flag) {
 
@@ -112,10 +117,12 @@ function displayPast(flag) {
             if (err) return;
             const fileData = JSON.parse(data.toString());
 
-            utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split("-").join(" ")}`);
+            utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
 
             fileData.forEach((entry, index) => {
-                utils.term(`${ESC}${3 + index * 2};0f${editors[entry.name]}: ${entry.time}`);
+                const name = editors[entry.name];
+                const time = entry.time;
+                utils.term(`${ESC}${3 + index * 2};0f${name} ${laptop}: ${time}`);
             });
 
             fileDataIndex = fileData.length * 2;
@@ -123,9 +130,11 @@ function displayPast(flag) {
             fileStore = [...fileData];
         });
     } else {
-        utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split("-").join(" ")}`);
+        utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
         fileStore.forEach((entry, index) => {
-            utils.term(`${ESC}${3 + index * 2};0f${editors[entry.name]}: ${entry.time}`);
+            const name = editors[entry.name];
+            const time = entry.time;
+            utils.term(`${ESC}${3 + index * 2};0f${name} ${laptop}: ${time}`);
         });
         utils.term(`${ESC}${3 + fileDataIndex};0f${chalk.bgRed(date.toDateString())}`);
     }
@@ -136,16 +145,20 @@ function displayMetadata() {
 
     utils.getConsoleSize((columns, lines) => {
         const title = chalk.bgBlue.white('CodeSpell');
-        utils.term(`${ESC}` + "1;" + (Math.floor(columns / 2) - 3) + "f" + title);
+        utils.term(`${ESC}` + '1;' + (Math.floor(columns / 2) - 3) + 'f' + title);
     });
 };
 
 function save(codeEditors, index) {
+    if (codeEditors.length === 0) {
+        console.log('here');
+        return;
+    }
     const initData = JSON.stringify(codeEditors);
-    const date = new Date().toDateString().split(" ").join("-");
+    const date = new Date().toDateString().split(' ').join('-');
     let fileName = `codespell-${date}.json`;
     // const home = require('os').homedir();
-    // fileName = home + "/.codespell/" + fileName;
+    // fileName = home + '/.codespell/' + fileName;
 
     fs.stat(fileName, (err, exists) => {
         //File Exists   
@@ -157,13 +170,13 @@ function save(codeEditors, index) {
                 let finalData = [];
                 const fileData = JSON.parse(data.toString());
                 const closed = fileData.filter(entry => entry.close);
+                const tempData = [...fileData, ...codeEditors];
 
                 if (!(closed.length > 0)) {
                     finalData = [...codeEditors];
                 } else {
 
                     const closedNames = closed.map(entry => entry.name);
-                    const tempData = [...fileData, ...codeEditors];
 
                     closedNames.forEach(name => {
                         const c = tempData.filter(data => data.name === name);
@@ -172,16 +185,25 @@ function save(codeEditors, index) {
                             finalData.push(c[0]);
                         } else {
 
-                            let time = timeUtils.parseTime("00:00");
+                            let time = timeUtils.parseTime('00:00');
 
                             c.forEach((entry) => {
                                 const entryTime = timeUtils.parseTime(entry.time);
                                 time = timeUtils.addTime(time, entryTime);
                             });
 
+                            const closedEditor = runningEditors.find((editor) => {
+                                return editor.name === name
+                            });
+                            const closedEditorIndex = runningEditors.findIndex((editor) => {
+                                return editor.name === name
+                            });
+                            closedEditor.time = time.join(":");
+                            runningEditors[closedEditorIndex] = closedEditor;
+
                             finalData.push({
                                 name,
-                                time: time.join(":"),
+                                time: time.join(':'),
                                 close: false
                             });
                         }
@@ -197,6 +219,7 @@ function save(codeEditors, index) {
                     notClosed.forEach((entry) => {
                         finalData.push(entry)
                     });
+
                 }
 
                 utils.saveFile(fileName, JSON.stringify(finalData));
@@ -219,20 +242,20 @@ function save(codeEditors, index) {
 /**
  * https://stackoverflow.com/a/14861513/2231031
  */
-if (process.platform === "win32") {
-    var rl = require("readline").createInterface({
+if (process.platform === 'win32') {
+    var rl = require('readline').createInterface({
         input: process.stdin,
         output: process.stdout
     });
 
-    rl.on("SIGINT", function () {
-        process.emit("SIGINT");
+    rl.on('SIGINT', function () {
+        process.emit('SIGINT');
     });
 }
 
-process.on("SIGINT", function () {
+process.on('SIGINT', function () {
 
     // Clear console
-    console.log("\033c");
+    console.log('\033c');
     process.exit();
 });
