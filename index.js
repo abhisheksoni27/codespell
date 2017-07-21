@@ -9,7 +9,7 @@ const fs = require('./promises/fs');
 
 const home = require('os').homedir();
 
-const codeEditors = ['atom', 'subl', 'webstorm', 'nano', 'studio', 'idea'];
+const codeEditors = ['code', 'atom', 'subl', 'webstorm', 'nano', 'studio', 'idea'];
 let colors = [
     'bgBlack', 'bgRed', 'bgGreen',
     'bgCyan', 'bgBlue', 'bgMagenta', 'bgYellow'
