@@ -4,7 +4,7 @@ Record time spent programming epiphanies. 💫
 
 [![npm](https://img.shields.io/npm/dt/codespell.svg?style=flat-square)](https://github.com/abhisheksoni27/codespell)
 
-![codespell](./images/codespell.gif)
+![codespell](https://raw.githubusercontent.com/abhisheksoni27/codespell/master/images/codespell.gif)
 
 ## What are those numbers?
 
