@@ -31,6 +31,7 @@ utils.term('\033c');
 displayMetadata()
 displayPast();
 
+
 setInterval(execProcess, refreshTime);
 
 function execProcess() {
@@ -84,10 +85,10 @@ function addResult(codeEditor, index) {
                 return;
             };
 
-            const timeOne = 
-            timeUtils
-            .incrementTime(codeEditor.time, codeEditor.name, runningEditorNames.length)
-            .join(':');
+            const timeOne =
+                timeUtils
+                .incrementTime(codeEditor.time)
+                .join(':');
 
             time = codeEditor.time ?
                 timeOne :
