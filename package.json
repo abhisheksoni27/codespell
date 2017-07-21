@@ -2,7 +2,10 @@
   "name": "codespell",
   "version": "0.0.0",
   "description": "Record time spent programming epiphanies",
-  "main": "index.js",
+  "main": "./index.js",
+  "bin":{
+    "codespell": "./index.js"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
