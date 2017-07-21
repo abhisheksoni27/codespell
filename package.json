@@ -1,6 +1,6 @@
 {
   "name": "codespell",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Record time spent programming epiphanies",
   "main": "./index.js",
   "bin":{
@@ -18,7 +18,9 @@
     "time",
     "code",
     "coding",
-    "record"
+    "record",
+    "terminal",
+    "stats"
   ],
   "author": "Abhishek Soni",
   "license": "MIT",
