@@ -6,7 +6,7 @@ Record time spent programming epiphanies. 💫
 
 ![codespell](./images/codespell.gif)
 
-## What stats are shown
+## What are those numbers?
 
 Did you want to record how much time you actually spent coding? That's essentially what **codespell** does. 
 
@@ -50,4 +50,4 @@ $ codespell
 
 # Support for Windows
 
-I haven't tested it, since I don't have Windows, so! Anyway, I'd like to find out if it works, and if it doesn't, I'll fix it. 😂 🎉
+It's not supported, (yet!). Check out: [#2](https://github.com/abhisheksoni27/codespell/issues/2) to work on it. 😂 🎉
