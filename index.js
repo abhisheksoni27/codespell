@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 const chalk = require('chalk');
 
 const editors = require('./editors.js');
@@ -9,7 +10,7 @@ const fs = require('./promises/fs');
 
 const home = require('os').homedir();
 
-const codeEditors = ['code', 'atom', 'subl', 'webstorm', 'nano', 'studio', 'idea'];
+const codeEditors = ['atom', 'subl', 'code', 'webstorm', 'nano', 'studio', 'idea'];
 let colors = [
     'bgBlack', 'bgRed', 'bgGreen',
     'bgCyan', 'bgBlue', 'bgMagenta', 'bgYellow'
