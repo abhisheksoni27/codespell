@@ -5,6 +5,7 @@ const timeUtils = require('./timeUtil.js');
 const utils = require('./utils.js');
 const exec = require('./promises/exec');
 const fs = require('./promises/fs');
+const home = require('os').homedir();
 
 const codeEditors = ['code', 'atom', 'subl', 'webstorm', 'nano', 'studio', 'idea'];
 let colors = [
@@ -31,7 +32,6 @@ utils.term('\033c');
 displayMetadata()
 displayPast();
 
-
 setInterval(execProcess, refreshTime);
 
 function execProcess() {
@@ -45,7 +45,7 @@ function execProcess() {
 }
 
 function execAndAdd(codeEditor, index) {
-    const top = exec(`ps ax | grep ${codeEditor} -c`)
+    exec(`ps ax | grep ${codeEditor} -c`)
         .then((stdout, stderr) => {
             let data = String(stdout).trim();
             return data;
@@ -68,33 +68,38 @@ function addEditor(data, codeEditor) {
 
             runningEditorNames.push(codeEditor);
         } else {
-            runningEditors.forEach(addResult);
+            addResult(codeEditor);
         }
     }
 };
 
 function addResult(codeEditor, index) {
-    let time;
-    exec(`ps -eo comm,etime | grep ${codeEditor.name} | head -1`)
+    debugger;
+    exec(`ps -eo comm,etime | grep ${codeEditor} | head -1`)
         .then((stdout, stderr) => {
             let timeString = String(stdout).trim().match(/\d{1,3}/g);
+            let time;
+            let runningEditor = runningEditors.find((editor) => {
+                return editor.name === codeEditor;
+            });
+
+            let runningEditorIndex = runningEditors.findIndex((editor) => {
+                return editor.name === codeEditor;
+            });
 
             if (!timeString) {
-                codeEditor.close = !codeEditor.close;
+                runningEditor.close = !runningEditor.close;
                 save(runningEditors, index);
                 return;
             };
 
-            const timeOne =
-                timeUtils
-                .incrementTime(codeEditor.time)
-                .join(':');
+            const timeOne = timeUtils.incrementTime(runningEditor.time).join(':');
 
-            time = codeEditor.time ?
+            time = runningEditor.time ?
                 timeOne :
                 timeString.join(':');
 
-            codeEditor['time'] = time;
+            runningEditor['time'] = time;
         });
 }
 
@@ -132,7 +137,8 @@ function displayPast(flag) {
 
     if (!flag) {
 
-        const fileName = `codespell-${lastDay}.json`;
+        let fileName = `codespell-${lastDay}.json`;
+        fileName = home + '/.codespell/' + fileName;
 
         fs.readFileAsync(fileName)
             .then((data) => {
@@ -187,7 +193,6 @@ function save(codeEditors, index) {
     const initData = JSON.stringify(codeEditors);
     const date = new Date().toDateString().split(' ').join('-');
     let fileName = `codespell-${date}.json`;
-    const home = require('os').homedir();
     fileName = home + '/.codespell/' + fileName;
 
     fs.statAsync(fileName)
