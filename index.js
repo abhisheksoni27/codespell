@@ -206,10 +206,11 @@ function save(codeEditors, index) {
     fs.statAsync(fileName)
         .then((stats) => {
             if (stats) return fs.readFileAsync(fileName);
-        })
-        .catch((err) => {
+        }, function(){
             return utils.saveFile(fileName, initData);
         })
+
+
         .then((data) => {
             let finalData = [];
             const fileData = JSON.parse(String(data));
@@ -267,13 +268,13 @@ function save(codeEditors, index) {
         })
         .then((finalData) => {
             return utils.saveFile(fileName, JSON.stringify(finalData));
-        })
+        }, errCallback)
         .then(() => {
             if (!isNaN(index)) {
                 runningEditorNames = utils.deleteItem(runningEditorNames, index);
                 runningEditors = utils.deleteItem(runningEditors, index);
             }
-        })
+        }, errCallback)
 }
 
 function errCallback(err) {
