@@ -179,7 +179,7 @@ function displayPast(flag) {
             utils.term(`${ESC}${4 + index};2f${name} ${laptop}: ${time} ${boom}`);
         });
 
-    utils.term(`${ESC}${4 + fileDataIndex};0f${chalk.bgRed(today)}`);
+        utils.term(`${ESC}${4 + fileDataIndex};0f${chalk.bgRed(today)}`);
     }
 }
 
@@ -272,6 +272,10 @@ function save(codeEditors, index) {
             return finalData;
         })
         .then((finalData) => {
+            if (finalData === undefined) {
+                finalData = [];
+            }
+
             return utils.saveFile(fileName, JSON.stringify(finalData));
         }, errCallback)
         .then(() => {
