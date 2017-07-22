@@ -136,6 +136,7 @@ function displayPast(flag) {
         .toDateString()
         .split(' ')
         .join('-');
+    utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
 
     if (!flag) {
 
@@ -144,9 +145,14 @@ function displayPast(flag) {
 
         fs.readFileAsync(fileName)
             .then((data) => {
-                const fileData = JSON.parse(String(data));
 
-                utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
+                if (String(data) === "") {
+                    // Delete tampered file.
+                    fs.unlinkAsync(fileName);
+                    return;
+                }
+
+                const fileData = JSON.parse(String(data));
 
                 fileData.forEach((entry, index) => {
                     const name = chalk[randomColor()].white(editors[entry.name]);
@@ -161,7 +167,7 @@ function displayPast(flag) {
 
             })
             .catch((err) => {
-                return err;
+                // Do Nothing.
             });
 
     } else {
@@ -173,8 +179,8 @@ function displayPast(flag) {
             utils.term(`${ESC}${4 + index};2f${name} ${laptop}: ${time} ${boom}`);
         });
 
-        utils.term(`${ESC}${4 + fileDataIndex};0f${chalk.bgRed(today)}`);
     }
+    utils.term(`${ESC}${4 + fileDataIndex};0f${chalk.bgRed(today)}`);
 }
 
 function displayMetadata() {
@@ -271,7 +277,8 @@ function save(codeEditors, index) {
 }
 
 function errCallback(err) {
-    return err;
+    console.log(err);
+    process.exit();
 }
 
 function randomColor() {

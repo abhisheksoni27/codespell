@@ -21,18 +21,27 @@ function statAsync(fileName) {
 function writeFileAsync(fileName, data) {
     return new Promise((resolve, reject) => {
         fs.writeFile(fileName, data, (err) => {
-            if (err) reject();
+            if (err) reject(err);
             resolve();
-        })
+        });
     });
 }
 
 function mkdirAsync(path) {
     return new Promise((resolve, reject) => {
-        fs.mkdir(path, (err)=>{
-            if(err) reject();
+        fs.mkdir(path, (err) => {
+            if (err) reject(err);
             resolve();
-        })
+        });
+    });
+}
+
+function unlinkAsync(fileName) {
+    return new Promise((resolve, reject) => {
+        fs.unlink(fileName, (err) => {
+            if (err) reject(err);
+            resolve();
+        });
     });
 }
 
@@ -40,5 +49,6 @@ module.exports = {
     readFileAsync,
     statAsync,
     writeFileAsync,
-    mkdirAsync
+    mkdirAsync,
+    unlinkAsync
 };
