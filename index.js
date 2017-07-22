@@ -235,12 +235,12 @@ function save(codeEditors, index) {
                             return editor.name === name
                         });
 
-                        closedEditor.time = time.join(':');
+                        closedEditor.time = timeUtils.formatTime(time.join(':'));
                         runningEditors[closedEditorIndex] = closedEditor;
 
                         finalData.push({
                             name,
-                            time: time.join(':'),
+                            time: timeUtils.formatTime(time.join(':')),
                             close: !closedEditor.close
                         });
                     }
