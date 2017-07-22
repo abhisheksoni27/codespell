@@ -136,7 +136,6 @@ function displayPast(flag) {
         .toDateString()
         .split(' ')
         .join('-');
-    utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
 
     if (!flag) {
 
@@ -148,17 +147,18 @@ function displayPast(flag) {
 
                 if (String(data) === "") {
                     // Delete tampered file.
-                    fs.unlinkAsync(fileName);
+                    fs.unlinkAsync(fileName).catch(errCallback);
                     return;
                 }
 
                 const fileData = JSON.parse(String(data));
+                utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
 
                 fileData.forEach((entry, index) => {
                     const name = chalk[randomColor()].white(editors[entry.name]);
                     const time = chalk.blue(entry.time);
                     chalk.black
-                    utils.term(`${ESC}${4 + index};2f${name} ${laptop}: ${time} ${boom}`);
+                    utils.term(`${ESC}${4 + index };2f${name} ${laptop}: ${time} ${boom}`);
                 });
 
                 fileDataIndex = fileData.length * 2;
@@ -179,8 +179,8 @@ function displayPast(flag) {
             utils.term(`${ESC}${4 + index};2f${name} ${laptop}: ${time} ${boom}`);
         });
 
-    }
     utils.term(`${ESC}${4 + fileDataIndex};0f${chalk.bgRed(today)}`);
+    }
 }
 
 function displayMetadata() {
@@ -194,11 +194,16 @@ function displayMetadata() {
 };
 
 function save(codeEditors, index) {
-    if (codeEditors.length === 0) {
+    if (codeEditors.length === 0 && codeEditors === undefined) {
         return;
     }
 
     const initData = JSON.stringify(codeEditors);
+
+    if (initData === undefined) {
+        return;
+    }
+
     const date = new Date().toDateString().split(' ').join('-');
     let fileName = `codespell-${date}.json`;
     fileName = home + '/.codespell/' + fileName;
@@ -206,12 +211,12 @@ function save(codeEditors, index) {
     fs.statAsync(fileName)
         .then((stats) => {
             if (stats) return fs.readFileAsync(fileName);
-        }, function(){
+        }, function () {
             return utils.saveFile(fileName, initData);
         })
-
-
         .then((data) => {
+
+
             let finalData = [];
             const fileData = JSON.parse(String(data));
             const closed = fileData.filter(entry => entry.close);
