@@ -77,7 +77,6 @@ function addEditor(data, codeEditor) {
 };
 
 function addResult(codeEditor, index) {
-    debugger;
     exec(`ps -eo comm,etime | grep ${codeEditor} | head -1`)
         .then((stdout, stderr) => {
             let timeString = String(stdout).trim().match(/\d{1,3}/g);
@@ -102,7 +101,7 @@ function addResult(codeEditor, index) {
                 timeOne :
                 timeString.join(':');
 
-            runningEditor['time'] = time;
+            runningEditor['time'] = timeUtils.formatTime(time);
         });
 }
 
