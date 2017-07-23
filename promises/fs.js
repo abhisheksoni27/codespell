@@ -1,30 +1,7 @@
 const fs = require('fs');
 
 function readFileAsync(fileName) {
-    return new Promise((resolve, reject) => {
-        fs.readFile(fileName, (err, data) => {
-            if (err) reject(err);
-            resolve(data);
-        });
-    });
-}
-
-function statAsync(fileName) {
-    return new Promise((resolve, reject) => {
-        fs.stat(fileName, (err, stats) => {
-            if (err) reject(err);
-            resolve(stats);
-        });
-    });
-}
-
-function writeFileAsync(fileName, data) {
-    return new Promise((resolve, reject) => {
-        fs.writeFile(fileName, data, (err) => {
-            if (err) reject(err);
-            resolve();
-        });
-    });
+    return fs.readFileSync(fileName);
 }
 
 function mkdirAsync(path) {
@@ -45,10 +22,13 @@ function unlinkAsync(fileName) {
     });
 }
 
+function exists(fileName) {
+    return fs.existsSync(fileName);
+}
+
 module.exports = {
     readFileAsync,
-    statAsync,
-    writeFileAsync,
     mkdirAsync,
-    unlinkAsync
+    unlinkAsync,
+    exists
 };

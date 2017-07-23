@@ -1,5 +1,3 @@
-const editor = '';
-
 function addTime(time1, time2) {
     let array = time1.map((item, index) => {
         let sum = item + time2[index]
@@ -15,7 +13,6 @@ function addTime(time1, time2) {
         array[1] -= 60;
         array[0]++;
     }
-
 
     return array;
 }
@@ -57,7 +54,7 @@ function incrementTime(time) {
 }
 
 function formatTime(time) {
-    // time: [1,24,37]
+    // time: [1,4,7]
 
     let formattedTime;
 
@@ -74,11 +71,10 @@ function formatTime(time) {
             str.unshift("0");
             return str.join("");
         }
-        return str;
+        return str
     });
 
     return formattedTimeString.join(":");
-
 }
 
 module.exports = {

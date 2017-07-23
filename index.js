@@ -10,7 +10,7 @@ const fs = require('./promises/fs');
 
 const home = require('os').homedir();
 
-const codeEditors = ['atom', 'subl', 'code', 'webstorm', 'nano', 'studio', 'idea'];
+const codeEditorsNames = ['atom', 'subl', 'code', 'webstorm', 'nano', 'studio', 'idea'];
 let colors = [
     'bgBlack', 'bgRed', 'bgGreen',
     'bgCyan', 'bgBlue', 'bgMagenta', 'bgYellow'
@@ -39,7 +39,7 @@ setInterval(execProcess, refreshTime);
 
 function execProcess() {
     count++;
-    codeEditors.forEach(execAndAdd);
+    codeEditorsNames.forEach(execAndAdd);
     display();
 
     if (!(count % saveTime) && runningEditors.length > 0) {
@@ -54,12 +54,12 @@ function execAndAdd(codeEditor, index) {
             return data;
         })
         .then((data) => {
-            addEditor(data, codeEditor);
+            addEditor(data, codeEditor, index);
         })
         .catch(errCallback);
 }
 
-function addEditor(data, codeEditor) {
+function addEditor(data, codeEditor, index) {
     let count = parseInt(data);
     if (count > 2) {
         // Process exists
@@ -71,7 +71,7 @@ function addEditor(data, codeEditor) {
 
             runningEditorNames.push(codeEditor);
         } else {
-            addResult(codeEditor);
+            addResult(codeEditor, index);
         }
     }
 };
@@ -81,6 +81,7 @@ function addResult(codeEditor, index) {
         .then((stdout, stderr) => {
             let timeString = String(stdout).trim().match(/\d{1,3}/g);
             let time;
+
             let runningEditor = runningEditors.find((editor) => {
                 return editor.name === codeEditor;
             });
@@ -90,18 +91,16 @@ function addResult(codeEditor, index) {
             });
 
             if (!timeString) {
-                runningEditor.close = !runningEditor.close;
-                save(runningEditors, index);
+                runningEditor.close = true;
                 return;
-            };
-
-            const timeOne = timeUtils.incrementTime(runningEditor.time).join(':');
+            }
 
             time = runningEditor.time ?
-                timeOne :
-                timeString.join(':');
+                timeUtils.incrementTime(runningEditor.time) :
+                timeString;
 
             runningEditor['time'] = timeUtils.formatTime(time);
+            runningEditors[runningEditorIndex] = runningEditor;
         });
 }
 
@@ -142,33 +141,28 @@ function displayPast(flag) {
         let fileName = `codespell-${lastDay}.json`;
         fileName = home + '/.codespell/' + fileName;
 
-        fs.readFileAsync(fileName)
-            .then((data) => {
+        const data = fs.readFileAsync(fileName)
 
-                if (String(data) === "") {
-                    // Delete tampered file.
-                    fs.unlinkAsync(fileName).catch(errCallback);
-                    return;
-                }
+        if (String(data) === "") {
+            // Delete tampered file.
+            fs.unlinkAsync(fileName).catch(errCallback);
+            return;
+        }
 
-                const fileData = JSON.parse(String(data));
-                utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
+        const fileData = JSON.parse(String(data));
+        utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
 
-                fileData.forEach((entry, index) => {
-                    const name = chalk[randomColor()].white(editors[entry.name]);
-                    const time = chalk.blue(entry.time);
-                    chalk.black
-                    utils.term(`${ESC}${4 + index };2f${name} ${laptop}: ${time} ${boom}`);
-                });
+        fileData.forEach((entry, index) => {
+            const name = chalk[randomColor()].white(editors[entry.name]);
+            const time = chalk.blue(entry.time);
+            chalk.black
+            utils.term(`${ESC}${4 + index };2f${name} ${laptop}: ${time} ${boom}`);
+        });
 
-                fileDataIndex = fileData.length * 2;
-                utils.term(`${ESC}${3 + fileDataIndex};0f${chalk.bgRed(today)}`);
-                fileStore = [...fileData];
+        fileDataIndex = fileData.length * 2;
+        utils.term(`${ESC}${3 + fileDataIndex};0f${chalk.bgRed(today)}`);
+        fileStore = [...fileData];
 
-            })
-            .catch((err) => {
-                // Do Nothing.
-            });
 
     } else {
         utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
@@ -199,96 +193,76 @@ function save(codeEditors, index) {
     }
 
     const initData = JSON.stringify(codeEditors);
-
-    if (initData === undefined) {
-        return;
-    }
-
     const date = new Date().toDateString().split(' ').join('-');
     let fileName = `codespell-${date}.json`;
     fileName = home + '/.codespell/' + fileName;
 
-    fs.statAsync(fileName)
-        .then((stats) => {
-            if (stats) return fs.readFileAsync(fileName);
-        }, function () {
-            return utils.saveFile(fileName, initData);
-        })
-        .then((data) => {
+    if (!fs.exists(fileName)) {
+        // Save file and exit.
+        utils.saveFile(fileName, initData);
+    } else {
+        let finalData = [];
+        const fileData = JSON.parse(String(data));
+        const closed = codeEditors.filter(entry => entry.close);
+        const tempData = [...fileData, ...codeEditors];
+        if (closed.length === 0) {
+            finalData = [...codeEditors];
+        } else {
+            const closedNames = [...new Set(closed.map(entry => entry.name))];
 
+            closedNames.forEach(name => {
+                const c = tempData.filter((editor) => editor.name === name);
+                if (c.length == 1) {
+                    finalData.push(c[0]);
+                } else {
 
-            let finalData = [];
-            const fileData = JSON.parse(String(data));
-            const closed = fileData.filter(entry => entry.close);
-            const tempData = [...fileData, ...codeEditors];
-            if (!(closed.length > 0)) {
-                finalData = [...codeEditors];
-            } else {
-                const closedNames = closed.map(entry => entry.name);
+                    let time = timeUtils.parseTime('00:00:00');
 
-                closedNames.forEach(name => {
-                    const c = tempData.filter(data => data.name === name);
+                    c.forEach((entry) => {
+                        const entryTime = timeUtils.parseTime(entry.time);
+                        time = timeUtils.addTime(time, entryTime);
+                    });
 
-                    if (c.length === 1) {
-                        finalData.push(c[0]);
-                    } else {
+                    // const closedEditor = runningEditors.find((editor) => {
+                    //     return editor.name === name
+                    // });
+                    // const closedEditorIndex = runningEditors.findIndex((editor) => {
+                    //     return editor.name === name
+                    // });
 
-                        let time = timeUtils.parseTime('00:00:00');
+                    // closedEditor.time = timeUtils.formatTime(time.join(':'));
+                    // runningEditors[closedEditorIndex] = closedEditor;
 
-                        c.forEach((entry) => {
-                            const entryTime = timeUtils.parseTime(entry.time);
-                            time = timeUtils.addTime(time, entryTime);
-                        });
+                    finalData.push({
+                        name,
+                        time: timeUtils.formatTime(time.join(':')),
+                        close: false
+                    });
+                }
+            });
 
-                        const closedEditor = runningEditors.find((editor) => {
-                            return editor.name === name
-                        });
-                        const closedEditorIndex = runningEditors.findIndex((editor) => {
-                            return editor.name === name
-                        });
+            const notClosed = codeEditors.filter((entry) => {
+                if (closedNames.indexOf(entry.name) === -1) {
+                    return true;
+                }
+                return false;
+            });
 
-                        closedEditor.time = timeUtils.formatTime(time.join(':'));
-                        runningEditors[closedEditorIndex] = closedEditor;
+            notClosed.forEach((entry) => {
+                finalData.push(entry)
+            });
 
-                        finalData.push({
-                            name,
-                            time: timeUtils.formatTime(time.join(':')),
-                            close: !closedEditor.close
-                        });
-                    }
-                });
+            utils.saveFile(fileName, JSON.stringify(finalData));
 
-                const notClosed = codeEditors.filter((entry) => {
-                    if (closedNames.indexOf(entry.name) === -1) {
-                        return true;
-                    }
-                    return false;
-                });
-
-                notClosed.forEach((entry) => {
-                    finalData.push(entry)
-                });
-            }
-            return finalData;
-        })
-        .then((finalData) => {
-            if (finalData === undefined) {
-                finalData = [];
-            }
-
-            return utils.saveFile(fileName, JSON.stringify(finalData));
-        }, errCallback)
-        .then(() => {
-            if (!isNaN(index)) {
-                runningEditorNames = utils.deleteItem(runningEditorNames, index);
-                runningEditors = utils.deleteItem(runningEditors, index);
-            }
-        }, errCallback)
+            runningEditorNames = utils.deleteItem(runningEditorNames, index);
+            runningEditors = utils.deleteItem(runningEditors, index);
+        }
+    }
 }
 
 function errCallback(err) {
     console.log(err);
-    process.exit();
+    // process.exit();
 }
 
 function randomColor() {

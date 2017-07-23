@@ -1,5 +1,5 @@
 const exec = require('./promises/exec');
-const fs = require('./promises/fs');
+const fs = require('fs');
 
 function getConsoleSize(stdout) {
     const dataString = String(stdout);
@@ -17,11 +17,12 @@ function term() {
 }
 
 function deleteItem(array, index) {
+    if(index===undefined) return array;
     return [...array.slice(0, index), ...array.slice(index + 1)];
 }
 
 function saveFile(fileName, data) {
-    return fs.writeFileAsync(fileName, data)
+    fs.writeFileSync(fileName, data);
 }
 
 module.exports = {
