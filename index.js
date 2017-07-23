@@ -11,7 +11,7 @@ const fsOriginal = require('fs');
 
 const home = require('os').homedir();
 
-const codeEditorsNames = ['atom', 'subl', 'code', 'webstorm', 'nano', 'studio', 'idea'];
+const codeEditorsNames = ['atom', 'subl', 'vscode', 'webstorm', 'nano', 'studio', 'idea'];
 let colors = [
     'bgBlack', 'bgRed', 'bgGreen',
     'bgCyan', 'bgBlue', 'bgMagenta', 'bgYellow'
