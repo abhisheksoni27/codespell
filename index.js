@@ -99,7 +99,7 @@ function addEditor(data, codeEditor, index) {
         // Check if this still exists in editors because of time lag
 
         if (runningEditorNames.indexOf(codeEditor) !== -1) {
-            
+
             let runningEditor = runningEditors.editors.find((editor) => {
                 return editor.name === codeEditor;
             });
@@ -108,20 +108,24 @@ function addEditor(data, codeEditor, index) {
                 return editor.name === codeEditor;
             });
 
-            runningEditors.closedEditors.push(runningEditor);
-            runningEditors.closedEditorNames.push(runningEditor.name);
-            runningEditors.editors = utils
-                .deleteItem(runningEditors.editors, runningEditorIndex)
-            runningEditorNames = utils
-                .deleteItem(runningEditorNames, runningEditorIndex);
+            deleteClosed(runningEditor, runningEditorIndex);
             return;
-        };
+        }
     }
-};
+}
+
+
 
 function addResult(codeEditor) {
+    if (codeEditor === "vscode") {
+        codeEditor = "code";
+    }
+
     exec(`ps -eo comm,etime | grep ${codeEditor} | head -1`)
         .then((stdout, stderr) => {
+            if (codeEditor === "code") {
+                codeEditor = "vscode";
+            }
             let timeString = String(stdout).trim().match(/\d{1,3}/g);
             let time;
 
@@ -134,12 +138,7 @@ function addResult(codeEditor) {
             });
 
             if (!timeString) {
-                runningEditors.closedEditors.push(runningEditor);
-                runningEditors.closedEditorNames.push(runningEditor.name);
-                runningEditors.editors = utils
-                    .deleteItem(runningEditors.editors, runningEditorIndex)
-                runningEditorNames = utils
-                    .deleteItem(runningEditorNames, runningEditorIndex);
+                deleteClosed(runningEditor, runningEditorIndex);
                 return;
             };
 
@@ -253,28 +252,7 @@ function displayMetadata() {
 };
 
 function save(codeEditors, index) {
-
-    if (!fsOriginal.existsSync(fileName)) {
-        utils.saveFile(fileName, JSON.stringify(codeEditors, null, 4));
-        return;
-    } else {
-        //File Exists
-
-        /**
-         * Three Cases:
-         * 1. Every editor is false.
-         * 2. One is true, others are false.
-         * 3. One has true, and false entries, the rest are all false.
-         */
-
-        // First Case
-        // if (runningEditors.closedEditorNames.length === 0) {
-        // return;
-        // } 
-
-        utils.saveFile(fileName, JSON.stringify(codeEditors, null, 4));
-        return;
-    }
+    utils.saveFile(fileName, JSON.stringify(codeEditors, null, 4));
 }
 
 function errCallback(err) {
@@ -283,6 +261,17 @@ function errCallback(err) {
 
 function randomColor() {
     return colors[Math.floor(Math.random() * 7)];
+}
+
+function deleteClosed(runningEditor, runningEditorIndex) {
+
+    runningEditors.closedEditors.push(runningEditor);
+    runningEditors.closedEditorNames.push(runningEditor.name);
+    runningEditors.editors = utils
+        .deleteItem(runningEditors.editors, runningEditorIndex)
+    runningEditorNames = utils
+        .deleteItem(runningEditorNames, runningEditorIndex);
+    return;
 }
 
 /**

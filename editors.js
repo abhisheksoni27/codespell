@@ -1,5 +1,5 @@
 module.exports = {
-    'code': 'Visual Studio Code',
+    'vscode': 'Visual Studio Code',
     'subl': 'Sublime Text',
     'atom': 'Atom',
     'nano': 'Nano',
