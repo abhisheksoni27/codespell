@@ -225,7 +225,7 @@ function displayPast(flag) {
             utils.term(`${ESC}${4 + index};2f${name} ${laptop}: ${time} ${boom}`);
         });
 
-        fileDataIndex = fileData.length * 2;
+        fileDataIndex = fileData.closedEditors.length * 2;
         utils.term(`${ESC}${3 + fileDataIndex};0f${chalk.bgRed(today)}`);
         fileStore = [...fileData.closedEditors];
 
