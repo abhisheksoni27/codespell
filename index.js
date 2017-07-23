@@ -81,7 +81,6 @@ function addResult(codeEditor, index) {
         .then((stdout, stderr) => {
             let timeString = String(stdout).trim().match(/\d{1,3}/g);
             let time;
-
             let runningEditor = runningEditors.find((editor) => {
                 return editor.name === codeEditor;
             });
@@ -91,16 +90,16 @@ function addResult(codeEditor, index) {
             });
 
             if (!timeString) {
-                runningEditor.close = true;
+                runningEditor.close = !runningEditor.close;
+                save(runningEditors, index);
                 return;
-            }
+            };
 
             time = runningEditor.time ?
-                timeUtils.incrementTime(runningEditor.time) :
-                timeString;
+                timeUtils.incrementTime(runningEditor.time).join(':') :
+                timeString.join(':');
 
-            runningEditor['time'] = timeUtils.formatTime(time);
-            runningEditors[runningEditorIndex] = runningEditor;
+            runningEditor['time'] = time;
         });
 }
 
@@ -125,7 +124,7 @@ function display() {
 
             utils.term(`${escapeString} ${fullName}: ${time} ${sparkles}`);
         }
-    })
+    });
 }
 
 function displayPast(flag) {
@@ -142,27 +141,20 @@ function displayPast(flag) {
         fileName = home + '/.codespell/' + fileName;
 
         const data = fs.readFileAsync(fileName)
-
-        if (String(data) === "") {
-            // Delete tampered file.
-            fs.unlinkAsync(fileName).catch(errCallback);
-            return;
-        }
-
         const fileData = JSON.parse(String(data));
+
         utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
 
         fileData.forEach((entry, index) => {
             const name = chalk[randomColor()].white(editors[entry.name]);
             const time = chalk.blue(entry.time);
             chalk.black
-            utils.term(`${ESC}${4 + index };2f${name} ${laptop}: ${time} ${boom}`);
+            utils.term(`${ESC}${4 + index};2f${name} ${laptop}: ${time} ${boom}`);
         });
 
         fileDataIndex = fileData.length * 2;
         utils.term(`${ESC}${3 + fileDataIndex};0f${chalk.bgRed(today)}`);
         fileStore = [...fileData];
-
 
     } else {
         utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
@@ -188,10 +180,9 @@ function displayMetadata() {
 };
 
 function save(codeEditors, index) {
-    if (codeEditors.length === 0 && codeEditors === undefined) {
+    if (codeEditors.length === 0) {
         return;
     }
-
     const initData = JSON.stringify(codeEditors);
     const date = new Date().toDateString().split(' ').join('-');
     let fileName = `codespell-${date}.json`;
@@ -201,18 +192,22 @@ function save(codeEditors, index) {
         // Save file and exit.
         utils.saveFile(fileName, initData);
     } else {
+
+        const data = fs.readFileAsync(fileName);
+
         let finalData = [];
         const fileData = JSON.parse(String(data));
-        const closed = codeEditors.filter(entry => entry.close);
+        const closed = fileData.filter(entry => entry.close);
         const tempData = [...fileData, ...codeEditors];
-        if (closed.length === 0) {
+        if (!(closed.length > 0)) {
             finalData = [...codeEditors];
         } else {
-            const closedNames = [...new Set(closed.map(entry => entry.name))];
+            const closedNames = closed.map(entry => entry.name);
 
             closedNames.forEach(name => {
-                const c = tempData.filter((editor) => editor.name === name);
-                if (c.length == 1) {
+                const c = tempData.filter(data => data.name === name);
+
+                if (c.length === 1) {
                     finalData.push(c[0]);
                 } else {
 
@@ -223,21 +218,17 @@ function save(codeEditors, index) {
                         time = timeUtils.addTime(time, entryTime);
                     });
 
-                    // const closedEditor = runningEditors.find((editor) => {
-                    //     return editor.name === name
-                    // });
-                    // const closedEditorIndex = runningEditors.findIndex((editor) => {
-                    //     return editor.name === name
-                    // });
-
-                    // closedEditor.time = timeUtils.formatTime(time.join(':'));
-                    // runningEditors[closedEditorIndex] = closedEditor;
-
-                    finalData.push({
-                        name,
-                        time: timeUtils.formatTime(time.join(':')),
-                        close: false
+                    const closedEditor = runningEditors.find((editor) => {
+                        return editor.name === name
                     });
+                    const closedEditorIndex = runningEditors.findIndex((editor) => {
+                        return editor.name === name
+                    });
+
+                    closedEditor.time = time.join(':');
+                    closedEditor.close = !closedEditor.close ;
+                    runningEditors[closedEditorIndex] = closedEditor;
+                    finalData.push(closedEditor);
                 }
             });
 
@@ -251,9 +242,9 @@ function save(codeEditors, index) {
             notClosed.forEach((entry) => {
                 finalData.push(entry)
             });
-
-            utils.saveFile(fileName, JSON.stringify(finalData));
-
+        }
+        utils.saveFile(fileName, JSON.stringify(finalData));
+        if (!isNaN(index)) {
             runningEditorNames = utils.deleteItem(runningEditorNames, index);
             runningEditors = utils.deleteItem(runningEditors, index);
         }
@@ -261,8 +252,7 @@ function save(codeEditors, index) {
 }
 
 function errCallback(err) {
-    console.log(err);
-    // process.exit();
+    console.log(err)
 }
 
 function randomColor() {
