@@ -1,4 +1,13 @@
 function addTime(time1, time2) {
+
+    if (typeof time1 === "string") {
+        time1 = parseTime(time1);
+    }
+
+    if (typeof time2 === "string") {
+        time2 = parseTime(time2);
+    }
+
     let array = time1.map((item, index) => {
         let sum = item + time2[index]
         return sum;

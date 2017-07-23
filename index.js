@@ -7,6 +7,7 @@ const timeUtils = require('./timeUtil.js');
 const utils = require('./utils.js');
 const exec = require('./promises/exec');
 const fs = require('./promises/fs');
+const fsOriginal = require('fs');
 
 const home = require('os').homedir();
 
@@ -21,8 +22,30 @@ const boom = '💥'
 const sparkles = '✨'
 const ESC = '\033[';
 
-let runningEditors = [];
-let runningEditorNames = [];
+const date = new Date().toDateString().split(' ').join('-');
+let fileName = `codespell-${date}.json`;
+fileName = home + '/.codespell/' + fileName;
+
+let runningEditors;
+let runningEditorNames;
+
+try {
+    const readFileData = fsOriginal.readFileSync(fileName);
+    runningEditors = JSON.parse(String(readFileData));
+
+    const names = runningEditors.editors.map(editor => editor.name);
+    runningEditorNames = [...names];
+} catch (err) {
+    runningEditors = {
+        closedEditorNames: [],
+        closedEditors: [],
+        editors: []
+    };
+
+    runningEditorNames = [];
+}
+
+
 const refreshTime = 1000;
 let count = 0;
 let fileDataIndex = 0;
@@ -42,7 +65,7 @@ function execProcess() {
     codeEditorsNames.forEach(execAndAdd);
     display();
 
-    if (!(count % saveTime) && runningEditors.length > 0) {
+    if (!(count % saveTime) && runningEditors.editors.length > 0) {
         save(runningEditors);
     }
 }
@@ -64,42 +87,92 @@ function addEditor(data, codeEditor, index) {
     if (count > 2) {
         // Process exists
         if (runningEditorNames.indexOf(codeEditor) === -1) {
-            runningEditors.push({
-                name: codeEditor,
-                close: false
+            runningEditors.editors.push({
+                name: codeEditor
             });
 
             runningEditorNames.push(codeEditor);
         } else {
-            addResult(codeEditor, index);
+            addResult(codeEditor);
         }
+    } else {
+        // Check if this still exists in editors because of time lag
+
+        if (runningEditorNames.indexOf(codeEditor) !== -1) {
+            
+            let runningEditor = runningEditors.editors.find((editor) => {
+                return editor.name === codeEditor;
+            });
+
+            let runningEditorIndex = runningEditors.editors.findIndex((editor) => {
+                return editor.name === codeEditor;
+            });
+
+            runningEditors.closedEditors.push(runningEditor);
+            runningEditors.closedEditorNames.push(runningEditor.name);
+            runningEditors.editors = utils
+                .deleteItem(runningEditors.editors, runningEditorIndex)
+            runningEditorNames = utils
+                .deleteItem(runningEditorNames, runningEditorIndex);
+            return;
+        };
     }
 };
 
-function addResult(codeEditor, index) {
+function addResult(codeEditor) {
     exec(`ps -eo comm,etime | grep ${codeEditor} | head -1`)
         .then((stdout, stderr) => {
             let timeString = String(stdout).trim().match(/\d{1,3}/g);
             let time;
-            let runningEditor = runningEditors.find((editor) => {
+
+            let runningEditor = runningEditors.editors.find((editor) => {
                 return editor.name === codeEditor;
             });
 
-            let runningEditorIndex = runningEditors.findIndex((editor) => {
+            let runningEditorIndex = runningEditors.editors.findIndex((editor) => {
                 return editor.name === codeEditor;
             });
 
             if (!timeString) {
-                runningEditor.close = !runningEditor.close;
-                save(runningEditors, index);
+                runningEditors.closedEditors.push(runningEditor);
+                runningEditors.closedEditorNames.push(runningEditor.name);
+                runningEditors.editors = utils
+                    .deleteItem(runningEditors.editors, runningEditorIndex)
+                runningEditorNames = utils
+                    .deleteItem(runningEditorNames, runningEditorIndex);
                 return;
             };
 
-            time = runningEditor.time ?
-                timeUtils.incrementTime(runningEditor.time).join(':') :
-                timeString.join(':');
+            // Check if this editor was closed
 
-            runningEditor['time'] = time;
+            if (runningEditors.closedEditorNames.indexOf(codeEditor) !== -1) {
+
+                let closedEditor = runningEditors.closedEditors.find((editor) => {
+                    return editor.name === codeEditor
+                });
+
+                let closedEditorIndex = runningEditors.closedEditors
+                    .findIndex((editor) => {
+                        return editor.name === codeEditor
+                    });
+
+                let finalTime = timeUtils.addTime(closedEditor.time, timeString.join(":"));
+
+                runningEditor["time"] = timeUtils.formatTime(finalTime);
+
+                runningEditors.closedEditors = utils
+                    .deleteItem(runningEditors.closedEditors, closedEditorIndex);
+
+                runningEditors.closedEditorNames = utils
+                    .deleteItem(runningEditors.closedEditorNames, closedEditorIndex);
+            } else {
+
+                time = runningEditor.time ?
+                    timeUtils.incrementTime(runningEditor.time) :
+                    timeString;
+
+                runningEditor['time'] = timeUtils.formatTime(time);
+            }
         });
 }
 
@@ -110,7 +183,7 @@ function display() {
     displayMetadata();
     displayPast(true);
 
-    runningEditors.forEach((editor, index) => {
+    runningEditors.editors.forEach((editor, index) => {
         const name = editor.name;
         const fullName = chalk[colors[index * 2]].white(editors[name]) + laptop;
         if ((!editor.time) && (!editor.close)) {
@@ -145,7 +218,7 @@ function displayPast(flag) {
 
         utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
 
-        fileData.forEach((entry, index) => {
+        fileData.closedEditors.forEach((entry, index) => {
             const name = chalk[randomColor()].white(editors[entry.name]);
             const time = chalk.blue(entry.time);
             chalk.black
@@ -154,7 +227,7 @@ function displayPast(flag) {
 
         fileDataIndex = fileData.length * 2;
         utils.term(`${ESC}${3 + fileDataIndex};0f${chalk.bgRed(today)}`);
-        fileStore = [...fileData];
+        fileStore = [...fileData.closedEditors];
 
     } else {
         utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
@@ -180,74 +253,27 @@ function displayMetadata() {
 };
 
 function save(codeEditors, index) {
-    if (codeEditors.length === 0) {
+
+    if (!fsOriginal.existsSync(fileName)) {
+        utils.saveFile(fileName, JSON.stringify(codeEditors, null, 4));
         return;
-    }
-    const initData = JSON.stringify(codeEditors);
-    const date = new Date().toDateString().split(' ').join('-');
-    let fileName = `codespell-${date}.json`;
-    fileName = home + '/.codespell/' + fileName;
-
-    if (!fs.exists(fileName)) {
-        // Save file and exit.
-        utils.saveFile(fileName, initData);
     } else {
+        //File Exists
 
-        const data = fs.readFileAsync(fileName);
+        /**
+         * Three Cases:
+         * 1. Every editor is false.
+         * 2. One is true, others are false.
+         * 3. One has true, and false entries, the rest are all false.
+         */
 
-        let finalData = [];
-        const fileData = JSON.parse(String(data));
-        const closed = fileData.filter(entry => entry.close);
-        const tempData = [...fileData, ...codeEditors];
-        if (!(closed.length > 0)) {
-            finalData = [...codeEditors];
-        } else {
-            const closedNames = closed.map(entry => entry.name);
+        // First Case
+        // if (runningEditors.closedEditorNames.length === 0) {
+        // return;
+        // } 
 
-            closedNames.forEach(name => {
-                const c = tempData.filter(data => data.name === name);
-
-                if (c.length === 1) {
-                    finalData.push(c[0]);
-                } else {
-
-                    let time = timeUtils.parseTime('00:00:00');
-
-                    c.forEach((entry) => {
-                        const entryTime = timeUtils.parseTime(entry.time);
-                        time = timeUtils.addTime(time, entryTime);
-                    });
-
-                    const closedEditor = runningEditors.find((editor) => {
-                        return editor.name === name
-                    });
-                    const closedEditorIndex = runningEditors.findIndex((editor) => {
-                        return editor.name === name
-                    });
-
-                    closedEditor.time = time.join(':');
-                    closedEditor.close = !closedEditor.close ;
-                    runningEditors[closedEditorIndex] = closedEditor;
-                    finalData.push(closedEditor);
-                }
-            });
-
-            const notClosed = codeEditors.filter((entry) => {
-                if (closedNames.indexOf(entry.name) === -1) {
-                    return true;
-                }
-                return false;
-            });
-
-            notClosed.forEach((entry) => {
-                finalData.push(entry)
-            });
-        }
-        utils.saveFile(fileName, JSON.stringify(finalData));
-        if (!isNaN(index)) {
-            runningEditorNames = utils.deleteItem(runningEditorNames, index);
-            runningEditors = utils.deleteItem(runningEditors, index);
-        }
+        utils.saveFile(fileName, JSON.stringify(codeEditors, null, 4));
+        return;
     }
 }
 
@@ -277,5 +303,10 @@ process.on('SIGINT', function () {
 
     // Clear console
     console.log('\033c');
+
+    const names = runningEditors.editors.map(editor => editor.name);
+    runningEditors.closedEditorNames.push(...names);
+    runningEditors.closedEditors.push(...runningEditors.editors);
+
     process.exit();
 });
