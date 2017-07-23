@@ -1,9 +1,9 @@
 {
   "name": "codespell",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Record time spent programming epiphanies",
   "main": "./index.js",
-  "bin":{
+  "bin": {
     "codespell": "./index.js"
   },
   "scripts": {
