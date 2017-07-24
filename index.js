@@ -248,9 +248,9 @@ function displayPast(flag) {
 
 function displayMetadata() {
     const title = chalk.bgBlue.white('CodeSpell');
-    exec('resize')
+    exec('tput cols')
         .then((stdout, stderr) => {
-            const columns = utils.getConsoleSize(stdout);
+            const columns = parseInt(String(stdout));
             utils.term(`${ESC}` + '1;' + (Math.floor(columns / 2) - 3) + 'f' + title);
         })
         .catch(errCallback);
