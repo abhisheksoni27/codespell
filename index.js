@@ -174,7 +174,7 @@ function addResult(codeEditor) {
 }
 
 function display() {
-    // utils.term('\033c');
+    utils.term('\033c');
 
     // Metadata gone. Print again.
     displayMetadata();
