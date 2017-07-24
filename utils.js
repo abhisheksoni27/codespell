@@ -1,5 +1,6 @@
 const exec = require('./promises/exec');
 const fs = require('fs');
+const home = require('os').homedir();
 
 function getConsoleSize(stdout) {
     const dataString = String(stdout);
@@ -17,11 +18,17 @@ function term() {
 }
 
 function deleteItem(array, index) {
-    if(index===undefined) return array;
+    if (index === undefined) return array;
     return [...array.slice(0, index), ...array.slice(index + 1)];
 }
 
 function saveFile(fileName, data) {
+    const dir = home + "/.codespell/";
+
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir);
+    }
+
     fs.writeFileSync(fileName, data);
 }
 

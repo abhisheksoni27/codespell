@@ -114,8 +114,6 @@ function addEditor(data, codeEditor, index) {
     }
 }
 
-
-
 function addResult(codeEditor) {
     if (codeEditor === "vscode") {
         codeEditor = "code";
@@ -176,7 +174,7 @@ function addResult(codeEditor) {
 }
 
 function display() {
-    utils.term('\033c');
+    // utils.term('\033c');
 
     // Metadata gone. Print again.
     displayMetadata();
@@ -185,7 +183,7 @@ function display() {
     runningEditors.editors.forEach((editor, index) => {
         const name = editor.name;
         const fullName = chalk[colors[index * 2]].white(editors[name]) + laptop;
-        if ((!editor.time) && (!editor.close)) {
+        if (!editor.time) {
             (index === 0) ? utils.term('\nLoading..'): utils.term('Loading..');
             return;
         } else {
@@ -212,8 +210,15 @@ function displayPast(flag) {
         let fileName = `codespell-${lastDay}.json`;
         fileName = home + '/.codespell/' + fileName;
 
-        const data = fs.readFileAsync(fileName)
-        const fileData = JSON.parse(String(data));
+        let data;
+        let fileData;
+        
+        try {
+            data = fsOriginal.readFileSync(fileName);
+            fileData = JSON.parse(String(data))
+        } catch (readError) {
+            if(readError) return;
+        }
 
         utils.term(`${ESC}2;0f${chalk.bgGreen(lastDay).split('-').join(' ')}`);
 
